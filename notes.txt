@@ -1,0 +1,11 @@
+1. Three types of objects
+
+   - A singleton 'resource pool'. Checks CPU, RAM, disk, network availability
+   on prompt. Returns current availability
+
+   - A singleton ''
+
+   - Class for prompting Elastic search API to ask for the stats history of each test of interest.
+   For example relval number 1234.56 (unique id for it)
+
+2. The
