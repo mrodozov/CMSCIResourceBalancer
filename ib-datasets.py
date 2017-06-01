@@ -8,6 +8,11 @@ from commands import getstatusoutput
 from es_utils import get_payload
 
 def format(s, **kwds): return s % kwds
+
+"""
+"query": "release:%(release_cycle)s AND architecture:%(architecture)s AND workflow:561.0", -> thats the actual querry
+"""
+
 query_url='http://cmses-master01.cern.ch:9200/relvals_stats_*/_search'
 
 query_datsets = """
@@ -19,7 +24,7 @@ query_datsets = """
           "should": [
             {
               "query_string": {
-                "query": "release:%(release_cycle)s AND architecture:%(architecture)s",
+                "query": "release:%(release_cycle)s AND architecture:%(architecture)s AND workflow:561.0", 
                 "lowercase_expanded_terms": false
               }
             }
@@ -87,7 +92,8 @@ if __name__ == "__main__":
 
   total_hits = 0
 
-  '''
+
+
   while True:
     queryInfo["from"] = ent_from
     es_data = get_payload(query_url, format (query_datsets, **queryInfo)) # here
@@ -103,11 +109,23 @@ if __name__ == "__main__":
     ent_from = ent_from + hits
     json_out.append(content)
     if ent_from>=total_hits: break
+
+
+
   #print json.dumps(json_out, indent=2, sort_keys=True, separators=(',', ': '))
-  '''
+
+
+  #for i in json_out.keys():
+  #    print i
+
+  #print query_datsets
+
+  #es_data = get_payload(query_url, format (query_datsets, **queryInfo))
+
+  #print json.dumps(es_data, indent=2, sort_keys=True)
 
 
 
-  print query_datsets
+
 
 
