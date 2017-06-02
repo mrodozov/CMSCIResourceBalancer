@@ -71,7 +71,8 @@ ErrorCodesConverted = {
   "23552": "FallbackFileOpenError",
   "24064": "ExceededResourceVSize",
   "24320": "ExceededResourceRSS",
-  "24576": "ExceededResourceTime"
+  "24576": "ExceededResourceTime",
+  "31744": "TimeOut"
 }
 
 UNIX_X_CODES = {

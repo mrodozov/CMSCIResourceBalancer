@@ -10,7 +10,7 @@ from es_utils import get_payload
 def format(s, **kwds): return s % kwds
 
 """
-"query": "release:%(release_cycle)s AND architecture:%(architecture)s AND workflow:561.0", -> thats the actual querry
+"query": "release:%(release_cycle)s AND architecture:%(architecture)s AND workflow:561.0", -> thats the actual query
 """
 
 query_url='http://cmses-master01.cern.ch:9200/relvals_stats_*/_search'
@@ -24,7 +24,7 @@ query_datsets = """
           "should": [
             {
               "query_string": {
-                "query": "release:%(release_cycle)s AND architecture:%(architecture)s AND workflow:561.0", 
+                "query": "release:%(release_cycle)s AND architecture:%(architecture)s ", 
                 "lowercase_expanded_terms": false
               }
             }
@@ -93,7 +93,6 @@ if __name__ == "__main__":
   total_hits = 0
 
 
-
   while True:
     queryInfo["from"] = ent_from
     es_data = get_payload(query_url, format (query_datsets, **queryInfo)) # here
@@ -110,18 +109,37 @@ if __name__ == "__main__":
     json_out.append(content)
     if ent_from>=total_hits: break
 
-
-
   #print json.dumps(json_out, indent=2, sort_keys=True, separators=(',', ': '))
 
+  hits = json_out[0]
 
-  #for i in json_out.keys():
-  #    print i
+  print hits.keys()
+  print hits['hits'].keys()
+  #print hits['hits']['hits']
+
+  useful_records = {}
+
+
+  for i in json_out[0]['hits']['hits']:
+      '''
+      print type(i)
+      print i.keys()
+      print i['_source']
+      print i['_type']
+      print i['_id']
+      '''
+      id = i['_id']
+      k = i['_source']
+      useful_records[id] = {'duration': k['time'], 'timestamp': k['@timestamp'], 'workflow': k['workflow']}
+
+
+  print type(hits)
+
+  print json.dumps(useful_records, indent=2, sort_keys=True)
+
 
   #print query_datsets
-
   #es_data = get_payload(query_url, format (query_datsets, **queryInfo))
-
   #print json.dumps(es_data, indent=2, sort_keys=True)
 
 
