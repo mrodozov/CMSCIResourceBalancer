@@ -1,0 +1,60 @@
+{
+	"1.0": { 
+			"step1":{"description":[],"commands":"cd 1.0_ProdMinBias+ProdMinBias+DIGIPROD1+RECOPROD1; cmsDriver.py MinBias_8TeV_pythia8_TuneCUETP8M1_cff --conditions auto:run1_mc -n 10 --eventcontent RAWSIM --relval 9000,300 -s GEN,SIM --datatier GEN-SIM --beamspot Realistic8TeVCollision --fileout file:step1.root > step1_ProdMinBias+ProdMinBias+DIGIPROD1+RECOPROD1.log 2>&1;"},
+			"step2":{"description":[],"commands":"cd 1.0_ProdMinBias+ProdMinBias+DIGIPROD1+RECOPROD1; cmsDriver.py step2 --datatier GEN-SIM-RAW --conditions auto:run1_mc -s DIGI,L1,DIGI2RAW,HLT:@fake --eventcontent RAWSIM -n 100 --filein file:step1.root --fileout file:step2.root > step2_ProdMinBias+ProdMinBias+DIGIPROD1+RECOPROD1.log 2>&1;"},
+			"step3":{"description":[],"commands":"cd 1.0_ProdMinBias+ProdMinBias+DIGIPROD1+RECOPROD1; cmsDriver.py step3 --datatier GEN-SIM-RECO,AODSIM --conditions auto:run1_mc -s RAW2DIGI,L1Reco,RECO,EI --eventcontent RECOSIM,AODSIM -n 100 --filein file:step2.root --fileout file:step3.root > step3_ProdMinBias+ProdMinBias+DIGIPROD1+RECOPROD1.log 2>&1;"}
+	},
+	"2.0": {
+		
+			"step1":{"description":[],"commands":"cd 2.0_ProdTTbar+ProdTTbar+DIGIPROD1+RECOPROD1; cmsDriver.py TTbar_8TeV_TuneCUETP8M1_cfi --conditions auto:run1_mc -n 10 --eventcontent RAWSIM --relval 9000,100 -s GEN,SIM --datatier GEN-SIM --beamspot Realistic8TeVCollision --fileout file:step1.root > step1_ProdTTbar+ProdTTbar+DIGIPROD1+RECOPROD1.log 2>&1;"},
+			"step2":{"description":[],"commands":"cd 2.0_ProdTTbar+ProdTTbar+DIGIPROD1+RECOPROD1; cmsDriver.py step2 --datatier GEN-SIM-RAW --conditions auto:run1_mc -s DIGI,L1,DIGI2RAW,HLT:@fake --eventcontent RAWSIM -n 100 --filein file:step1.root --fileout file:step2.root > step2_ProdTTbar+ProdTTbar+DIGIPROD1+RECOPROD1.log 2>&1;"},
+			"step3":{"description":[],"commands":"cd 2.0_ProdTTbar+ProdTTbar+DIGIPROD1+RECOPROD1; cmsDriver.py step3 --datatier GEN-SIM-RECO,AODSIM --conditions auto:run1_mc -s RAW2DIGI,L1Reco,RECO,EI --eventcontent RECOSIM,AODSIM -n 100 --filein file:step2.root --fileout file:step3.root > step3_ProdTTbar+ProdTTbar+DIGIPROD1+RECOPROD1.log 2>&1;"}
+		
+	},
+	"3.0": {
+		
+			"step1":{"description":[],"commands":"cd 3.0_ProdQCD_Pt_3000_3500+ProdQCD_Pt_3000_3500+DIGIPROD1+RECOPROD1; cmsDriver.py QCD_Pt_3000_3500_8TeV_TuneCUETP8M1_cfi --conditions auto:run1_mc -n 5 --eventcontent RAWSIM --relval 9000,50 -s GEN,SIM --datatier GEN-SIM --beamspot Realistic8TeVCollision --fileout file:step1.root > step1_ProdQCD_Pt_3000_3500+ProdQCD_Pt_3000_3500+DIGIPROD1+RECOPROD1.log 2>&1;"},
+			"step2":{"description":[],"commands":"cd 3.0_ProdQCD_Pt_3000_3500+ProdQCD_Pt_3000_3500+DIGIPROD1+RECOPROD1; cmsDriver.py step2 --datatier GEN-SIM-RAW -n 5 --conditions auto:run1_mc -s DIGI,L1,DIGI2RAW,HLT:@fake --eventcontent RAWSIM --filein file:step1.root --fileout file:step2.root > step2_ProdQCD_Pt_3000_3500+ProdQCD_Pt_3000_3500+DIGIPROD1+RECOPROD1.log 2>&1;"},
+			"step3":{"description":[],"commands":"cd 3.0_ProdQCD_Pt_3000_3500+ProdQCD_Pt_3000_3500+DIGIPROD1+RECOPROD1; cmsDriver.py step3 --conditions auto:run1_mc -s RAW2DIGI,L1Reco,RECO,EI --datatier GEN-SIM-RECO,AODSIM -n 5 --eventcontent RECOSIM,AODSIM --filein file:step2.root --fileout file:step3.root > step3_ProdQCD_Pt_3000_3500+ProdQCD_Pt_3000_3500+DIGIPROD1+RECOPROD1.log 2>&1;"}
+		
+	},
+	"4.12": {
+		
+	},
+	"4.17": {
+		
+			"step2":{"description":[],"commands":"cd 4.17_RunMinBias2011A+RunMinBias2011A+HLTD+RECODR1reHLT+HARVESTDR1reHLT+SKIMDreHLT; cmsDriver.py step2 --datatier FEVTDEBUGHLT --conditions auto:run1_hlt_Fake -s L1REPACK,HLT:@fake --process reHLT --data --eventcontent FEVTDEBUGHLT -n 100 --filein filelist:step1_dasquery.log --lumiToProcess step1_lumiRanges.log --fileout file:step2.root > step2_RunMinBias2011A+RunMinBias2011A+HLTD+RECODR1reHLT+HARVESTDR1reHLT+SKIMDreHLT.log 2>&1;"},
+			"step3":{"description":[],"commands":"cd 4.17_RunMinBias2011A+RunMinBias2011A+HLTD+RECODR1reHLT+HARVESTDR1reHLT+SKIMDreHLT; cmsDriver.py step3 --conditions auto:run1_data_Fake -s RAW2DIGI,L1Reco,RECO,EI,PAT,ALCA:SiStripCalZeroBias+SiStripCalMinBias+TkAlMinBias,DQM:@standardDQMFakeHLT+@miniAODDQM --runUnscheduled --process reRECO --data --eventcontent RECO,MINIAOD,DQM --hltProcess reHLT --scenario pp --datatier RECO,MINIAOD,DQMIO -n 100 --filein file:step2.root --fileout file:step3.root > step3_RunMinBias2011A+RunMinBias2011A+HLTD+RECODR1reHLT+HARVESTDR1reHLT+SKIMDreHLT.log 2>&1;"},
+			"step4":{"description":[],"commands":"cd 4.17_RunMinBias2011A+RunMinBias2011A+HLTD+RECODR1reHLT+HARVESTDR1reHLT+SKIMDreHLT; cmsDriver.py step4 --data --filetype DQM --conditions auto:run1_data_Fake -s HARVESTING:@standardDQMFakeHLT+@miniAODDQM --scenario pp -n 100 --filein file:step3_inDQM.root --fileout file:step4.root > step4_RunMinBias2011A+RunMinBias2011A+HLTD+RECODR1reHLT+HARVESTDR1reHLT+SKIMDreHLT.log 2>&1;"},
+			"step5":{"description":[],"commands":"cd 4.17_RunMinBias2011A+RunMinBias2011A+HLTD+RECODR1reHLT+HARVESTDR1reHLT+SKIMDreHLT; cmsDriver.py step5 --conditions auto:run1_data_Fake --filein file:step3.root -s SKIM:all --data --scenario pp --secondfilein filelist:step1_dasquery.log -n 100 --fileout file:step5.root > step5_RunMinBias2011A+RunMinBias2011A+HLTD+RECODR1reHLT+HARVESTDR1reHLT+SKIMDreHLT.log 2>&1;"}
+		
+	},
+	"4.23": {
+		
+			"step2":{"description":[],"commands":"cd 4.23_ValSkim2011A+ValSkim2011A+HLTDSKIM+RECODR1reHLT+HARVESTDR1reHLT; cmsDriver.py step2 --datatier FEVTDEBUGHLT --conditions auto:run1_hlt_Fake -s L1REPACK,HLT:@fake --process reHLT --eventcontent FEVTDEBUGHLT --data --inputCommands keep * drop * _ * _ * _RECO  -n 100 --filein filelist:step1_dasquery.log --lumiToProcess step1_lumiRanges.log --fileout file:step2.root > step2_ValSkim2011A+ValSkim2011A+HLTDSKIM+RECODR1reHLT+HARVESTDR1reHLT.log 2>&1;"},
+			"step3":{"description":[],"commands":"cd 4.23_ValSkim2011A+ValSkim2011A+HLTDSKIM+RECODR1reHLT+HARVESTDR1reHLT; cmsDriver.py step3 --conditions auto:run1_data_Fake -s RAW2DIGI,L1Reco,RECO,EI,PAT,ALCA:SiStripCalZeroBias+SiStripCalMinBias+TkAlMinBias,DQM:@standardDQMFakeHLT+@miniAODDQM --runUnscheduled --process reRECO --data --eventcontent RECO,MINIAOD,DQM --hltProcess reHLT --scenario pp --datatier RECO,MINIAOD,DQMIO -n 100 --filein file:step2.root --fileout file:step3.root > step3_ValSkim2011A+ValSkim2011A+HLTDSKIM+RECODR1reHLT+HARVESTDR1reHLT.log 2>&1;"},
+			"step4":{"description":[],"commands":"cd 4.23_ValSkim2011A+ValSkim2011A+HLTDSKIM+RECODR1reHLT+HARVESTDR1reHLT; cmsDriver.py step4 --data --filetype DQM --conditions auto:run1_data_Fake -s HARVESTING:@standardDQMFakeHLT+@miniAODDQM --scenario pp -n 100 --filein file:step3_inDQM.root --fileout file:step4.root > step4_ValSkim2011A+ValSkim2011A+HLTDSKIM+RECODR1reHLT+HARVESTDR1reHLT.log 2>&1;"}
+		
+	},
+	"4.24": {
+		
+			"step2":{"description":[],"commands":"cd 4.24_WMuSkim2011A+WMuSkim2011A+HLTDSKIM+RECODR1reHLT+HARVESTDR1reHLT; cmsDriver.py step2 --datatier FEVTDEBUGHLT --conditions auto:run1_hlt_Fake -s L1REPACK,HLT:@fake --process reHLT --eventcontent FEVTDEBUGHLT --data --inputCommands keep * drop * _ * _ * _RECO  - n 100--filein filelist: step1_dasquery.log--lumiToProcess step1_lumiRanges.log--fileout file: step2.root > step2_WMuSkim2011A + WMuSkim2011A + HLTDSKIM + RECODR1reHLT + HARVESTDR1reHLT.log 2 > & 1;"},
+			"step3":{"description":[],"commands":"cd 4.24_WMuSkim2011A+WMuSkim2011A+HLTDSKIM+RECODR1reHLT+HARVESTDR1reHLT; cmsDriver.py step3 --conditions auto:run1_data_Fake -s RAW2DIGI,L1Reco,RECO,EI,PAT,ALCA:SiStripCalZeroBias+SiStripCalMinBias+TkAlMinBias,DQM:@standardDQMFakeHLT+@miniAODDQM --runUnscheduled --process reRECO --data --eventcontent RECO,MINIAOD,DQM --hltProcess reHLT --scenario pp --datatier RECO,MINIAOD,DQMIO -n 100 --filein file:step2.root --fileout file:step3.root > step3_WMuSkim2011A+WMuSkim2011A+HLTDSKIM+RECODR1reHLT+HARVESTDR1reHLT.log 2>&1;"},
+			"step4":{"description":[],"commands":"cd 4.24_WMuSkim2011A+WMuSkim2011A+HLTDSKIM+RECODR1reHLT+HARVESTDR1reHLT; cmsDriver.py step4 --data --filetype DQM --conditions auto:run1_data_Fake -s HARVESTING:@standardDQMFakeHLT+@miniAODDQM --scenario pp -n 100 --filein file:step3_inDQM.root --fileout file:step4.root > step4_WMuSkim2011A+WMuSkim2011A+HLTDSKIM+RECODR1reHLT+HARVESTDR1reHLT.log 2>&1;"}
+		
+	},
+	"4.25": {
+		
+			"step2":{"description":[],"commands":"cd 4.25_WElSkim2011A+WElSkim2011A+HLTDSKIM+RECODR1reHLT+HARVESTDR1reHLT; cmsDriver.py step2 --datatier FEVTDEBUGHLT --conditions auto:run1_hlt_Fake -s L1REPACK,HLT:@fake --process reHLT --eventcontent FEVTDEBUGHLT --data --inputCommandskeep *drop * _ * _ * _RECO - n 100--filein filelist: step1_dasquery.log--lumiToProcess step1_lumiRanges.log--fileout file: step2.root > step2_WElSkim2011A + WElSkim2011A + HLTDSKIM + RECODR1reHLT + HARVESTDR1reHLT.log 2 > & 1;"},
+			"step3":{"description":[],"commands":"cd 4.25_WElSkim2011A+WElSkim2011A+HLTDSKIM+RECODR1reHLT+HARVESTDR1reHLT; cmsDriver.py step3 --conditions auto:run1_data_Fake -s RAW2DIGI,L1Reco,RECO,EI,PAT,ALCA:SiStripCalZeroBias+SiStripCalMinBias+TkAlMinBias,DQM:@standardDQMFakeHLT+@miniAODDQM --runUnscheduled --process reRECO --data --eventcontent RECO,MINIAOD,DQM --hltProcess reHLT --scenario pp --datatier RECO,MINIAOD,DQMIO -n 100 --filein file:step2.root --fileout file:step3.root > step3_WElSkim2011A+WElSkim2011A+HLTDSKIM+RECODR1reHLT+HARVESTDR1reHLT.log 2>&1;"},
+			"step4":{"description":[],"commands":"cd 4.25_WElSkim2011A+WElSkim2011A+HLTDSKIM+RECODR1reHLT+HARVESTDR1reHLT; cmsDriver.py step4 --data --filetype DQM --conditions auto:run1_data_Fake -s HARVESTING:@standardDQMFakeHLT+@miniAODDQM --scenario pp -n 100 --filein file:step3_inDQM.root --fileout file:step4.root > step4_WElSkim2011A+WElSkim2011A+HLTDSKIM+RECODR1reHLT+HARVESTDR1reHLT.log 2>&1;"}
+		
+	},
+	"4.26": {
+		
+			"step2":{"description":[],"commands":"cd 4.26_ZMuSkim2011A+ZMuSkim2011A+HLTDSKIM+RECODR1reHLT+HARVESTDR1reHLT; cmsDriver.py step2 --datatier FEVTDEBUGHLT --conditions auto:run1_hlt_Fake -s L1REPACK,HLT:@fake --process reHLT --eventcontent FEVTDEBUGHLT --data --inputCommands keep * drop * _ * _ * _RECO - n 100--filein filelist: step1_dasquery.log--lumiToProcess step1_lumiRanges.log--fileout file: step2.root > step2_ZMuSkim2011A + ZMuSkim2011A + HLTDSKIM + RECODR1reHLT + HARVESTDR1reHLT.log 2 > & 1;"},
+			"step3":{"description":[],"commands":"cd 4.26_ZMuSkim2011A+ZMuSkim2011A+HLTDSKIM+RECODR1reHLT+HARVESTDR1reHLT; cmsDriver.py step3 --conditions auto:run1_data_Fake -s RAW2DIGI,L1Reco,RECO,EI,PAT,ALCA:SiStripCalZeroBias+SiStripCalMinBias+TkAlMinBias,DQM:@standardDQMFakeHLT+@miniAODDQM --runUnscheduled --process reRECO --data --eventcontent RECO,MINIAOD,DQM --hltProcess reHLT --scenario pp --datatier RECO,MINIAOD,DQMIO -n 100 --filein file:step2.root --fileout file:step3.root > step3_ZMuSkim2011A+ZMuSkim2011A+HLTDSKIM+RECODR1reHLT+HARVESTDR1reHLT.log 2>&1;"},
+			"step4":{"description":[],"commands":"cd 4.26_ZMuSkim2011A+ZMuSkim2011A+HLTDSKIM+RECODR1reHLT+HARVESTDR1reHLT; cmsDriver.py step4 --data --filetype DQM --conditions auto:run1_data_Fake -s HARVESTING:@standardDQMFakeHLT+@miniAODDQM --scenario pp -n 100 --filein file:step3_inDQM.root --fileout file:step4.root > step4_ZMuSkim2011A+ZMuSkim2011A+HLTDSKIM+RECODR1reHLT+HARVESTDR1reHLT.log 2>&1;"}
+		
+	}
+}

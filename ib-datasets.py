@@ -136,12 +136,11 @@ if __name__ == "__main__":
   print type(hits)
 
   print json.dumps(useful_records, indent=2, sort_keys=True)
-
+  print json.dumps(json_out, indent=2, sort_keys=True, separators=(',', ': '))
 
   #print query_datsets
   #es_data = get_payload(query_url, format (query_datsets, **queryInfo))
   #print json.dumps(es_data, indent=2, sort_keys=True)
-
 
 
 
