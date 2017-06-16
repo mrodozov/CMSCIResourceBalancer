@@ -11,7 +11,7 @@ from es_utils import get_payload
 import ResourcePool
 from JobsConstructor import JobsConstructor
 from JobsManager import JobsManager
-from JobsProcessor import JobsProcessor
+from JobsProcessor import JobsProcessor, relval_test_process, dummyThread
 from threading import Thread
 import Queue
 from optparse import OptionParser
@@ -50,18 +50,45 @@ if __name__ == "__main__":
     opts.page_size = 0
 
     ''' here the program is tested  '''
-    
+
+    toProcessQueue = Queue.Queue()
+    processedTasksQueue = Queue.Queue()
+
     jc = JobsConstructor()
     matrixMap =jc.constructJobsMatrix(opts.release, opts.arch, opts.days, opts.page_size, None)
 
-    mm = JobsManager(matrixMap)
-    next_jobs = mm.getNextJobs()
+    jm = JobsManager(matrixMap)
+    jm.toProcessQueue = toProcessQueue
+    jm.processedQueue = processedTasksQueue
 
+    next_jobs = jm.getNextJobs()
+
+    '''
+    lastjob = None
     for i in next_jobs:
-        print i
-    
-    print 'again'
+        #print i
+        #print jm.checkIfEnoughMemory(i[4])
+        dt = dummyThread(relval_test_process, i)
+        toProcessQueue.put(dt)
+        lastjob = i
 
+    print lastjob
+    '''
+
+    jp = JobsProcessor(toProcessQueue, processedTasksQueue)
+    jp.allJobs = matrixMap
+
+
+    jm.putSelectedJobsOnQueue.start()
+
+    jp.start()
+    jm.putSelectedJobsOnQueue.join()
+    jp.join()
+
+
+    '''
+    print 'again'
+    
     mm.removeJobFromMatrix('3.0', 'step1', False)
     next_jobs = mm.getNextJobs()
     for i in next_jobs:
@@ -78,5 +105,6 @@ if __name__ == "__main__":
     next_jobs = mm.getNextJobs()
     for i in next_jobs:
         print i
-        
-    
+   '''
+
+
