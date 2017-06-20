@@ -18,9 +18,7 @@
 			"step3":{"description":[],"commands":"cd 3.0_ProdQCD_Pt_3000_3500+ProdQCD_Pt_3000_3500+DIGIPROD1+RECOPROD1; cmsDriver.py step3 --conditions auto:run1_mc -s RAW2DIGI,L1Reco,RECO,EI --datatier GEN-SIM-RECO,AODSIM -n 5 --eventcontent RECOSIM,AODSIM --filein file:step2.root --fileout file:step3.root > step3_ProdQCD_Pt_3000_3500+ProdQCD_Pt_3000_3500+DIGIPROD1+RECOPROD1.log 2>&1;"}
 		
 	},
-	"4.12": {
-		
-	},
+
 	"4.17": {
 		
 			"step2":{"description":[],"commands":"cd 4.17_RunMinBias2011A+RunMinBias2011A+HLTD+RECODR1reHLT+HARVESTDR1reHLT+SKIMDreHLT; cmsDriver.py step2 --datatier FEVTDEBUGHLT --conditions auto:run1_hlt_Fake -s L1REPACK,HLT:@fake --process reHLT --data --eventcontent FEVTDEBUGHLT -n 100 --filein filelist:step1_dasquery.log --lumiToProcess step1_lumiRanges.log --fileout file:step2.root > step2_RunMinBias2011A+RunMinBias2011A+HLTD+RECODR1reHLT+HARVESTDR1reHLT+SKIMDreHLT.log 2>&1;"},

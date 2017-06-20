@@ -105,7 +105,7 @@ class JobsConstructor(object):
     def getJobsCommands(self, workflow_matrix=None):
         #run runTheMatrix and parse the output for each workflow, example results structure in resources/wf.json
         #for now, get it from the file resources/wf.json
-        with open('resources/wf2.json') as matrixFile:
+        with open('resources/wf.json') as matrixFile:
             matrixMap = json.loads(matrixFile.read())
         return matrixMap
 

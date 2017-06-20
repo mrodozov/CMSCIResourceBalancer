@@ -10,9 +10,9 @@ from commands import getstatusoutput
 from es_utils import get_payload
 import ResourcePool
 from JobsConstructor import JobsConstructor
-from JobsManager import JobsManager
-from JobsProcessor import JobsProcessor, relval_test_process, dummyThread
-from threading import Thread
+from JobsManager import JobsManager, relval_test_process, dummyThread
+from JobsProcessor import JobsProcessor
+from threading import Thread, Event
 import Queue
 from optparse import OptionParser
 
@@ -61,7 +61,8 @@ if __name__ == "__main__":
     jm.toProcessQueue = toProcessQueue
     jm.processedQueue = processedTasksQueue
 
-    next_jobs = jm.getNextJobs()
+    init_jobs = jm.getNextJobs()
+    #jm.putNextJobsOnQueue(init_jobs)
 
     '''
     lastjob = None
@@ -71,18 +72,25 @@ if __name__ == "__main__":
         dt = dummyThread(relval_test_process, i)
         toProcessQueue.put(dt)
         lastjob = i
-
+    
     print lastjob
     '''
 
+    getNextJobsEvent = Event()
+    finishJobsEvent = Event()
+
     jp = JobsProcessor(toProcessQueue, processedTasksQueue)
-    jp.allJobs = matrixMap
+    jp.allJobs = jm.jobs
 
+    jm.getNextJobsEvent = getNextJobsEvent
+    jm.finishJobsEvent = finishJobsEvent
 
-    jm.putSelectedJobsOnQueue.start()
-
+    jm.putJobsOnProcessQueue.start()
+    jm.getProcessedJobs.start()
     jp.start()
-    jm.putSelectedJobsOnQueue.join()
+
+    jm.putJobsOnProcessQueue.join()
+    jm.getProcessedJobs.join()
     jp.join()
 
 

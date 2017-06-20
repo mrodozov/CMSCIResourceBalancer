@@ -5,7 +5,7 @@ This class instance(singleton) manages jobs ordering
 
 import json
 from Singleton import Singleton
-from threading import Lock, Thread
+from threading import Lock, Thread, Event, Semaphore
 from time import sleep
 from operator import itemgetter
 import psutil
@@ -19,14 +19,16 @@ def relval_test_process(job=None):
     jobStep = job[1]
     jobCumulativeTime = job[2]
     jobSelfTime = job[3]
-    jobCommands = job[4]
-    jobSelfTime = jobSelfTime / 10
+    jobMem = job[4]
+    jobCommands = job[5]
+    jobSelfTime = 20 / 10
 
     while jobSelfTime:
-        print 'eta: ', jobID, jobStep, jobSelfTime
-        jobSelfTime = jobSelfTime - 1
+        #print 'eta: ', jobID, jobStep, jobSelfTime
         sleep(1)
-    return {'id':jobID, 'step':jobStep, 'exit_code': 0}
+        jobSelfTime = jobSelfTime - 1
+
+    return {'id': jobID, 'step': jobStep, 'exit_code': 0, 'mem': int(jobMem)}
 
 class dummyThread(Thread):
 
@@ -36,6 +38,7 @@ class dummyThread(Thread):
         self._args = args
         #self.name = str(args[0] + ' ' + args[1])
         self.resultQueue = None
+        self.getNextJobs = None
 
     def run(self):
         result = self._target(*self._args)
@@ -55,15 +58,20 @@ class JobsManager(object):
         self.jobs_lock = Lock() # lock when touching jobs structure
         self.started_jobs_lock = Lock()
         self.results_lock = Lock() # lock when touching results structure
-
         ''' 
         add the thread jobs that put jobs on execution queue
         and finilizes them here
         '''
         self.started_jobs = [] # jobs already started
-        self.putSelectedJobsOnQueue = Thread(target=self.putJobsOnQueueAndGetResults)
+        self.putJobsOnProcessQueue = Thread(target=self.putJobsOnQueue)
+        self.getProcessedJobs = Thread(target=self.getFinishedJobs)
         self.toProcessQueue = None
         self.processedQueue = None
+        self.getNextJobsEvent = None
+        self.finishJobsEvent = None
+        self.allJobsConsumed = Event()
+
+        # alrighty, try it with semaphore
 
     '''
     methods to check resources availability
@@ -76,44 +84,25 @@ class JobsManager(object):
     methods executed as separated threads
     '''
 
-    def putJobsOnQueueAndGetResults(self):
+    def putJobsOnQueue(self):
 
         while True:
 
-            #get jobs from the structure put them on queue to process
-            next_jobs = self.getNextJobs()
-            print 'getting next jobs:'
-
-            for j in next_jobs:
-                print j[0], j[1]
-
-            for job in next_jobs:
-                if job[0] in self.started_jobs or not self.checkIfEnoughMemory(job[4]):
-                    print 'skipping job', job[0], job[1]
-                    continue
-                with self.started_jobs_lock:
-                    self.started_jobs.append(job[0])
-                    self.availableMemory = self.availableMemory - job[4]
-                thread_job = dummyThread(relval_test_process, job)
-                self.toProcessQueue.put(thread_job)
-
-
-            if self.jobs:
-                print 'there are jobs'
-                print self.jobs
-
-
-            if self.toProcessQueue.empty() and self.processedQueue.empty() and not self.jobs:
-                #all done
-                print 'two queues'
+            if not self.jobs:
+                print 'to process queue completed, breaking put jobs on queue', '\n'
                 break
 
-            #get jobs from processed queue, finish them and write the result status
-            finishedJob = self.processedQueue.get()
-            self.finishJob(finishedJob)
+            #get jobs from the structure put them on queue to process
+            next_jobs = self.getNextJobs()
+            print 'put jobs on queue getting next jobs:', '\n'
+            #print next_jobs
+            #if len(next_jobs):
+            self.putNextJobsOnQueue(next_jobs)
+            #if self.jobs:
+                #print 'there are jobs'
+                #print self.jobs[]
 
-
-
+            self.getNextJobsEvent.wait()
 
     def getNextJobs(self, sort_function=None):
         next_jobs = []
@@ -130,6 +119,49 @@ class JobsManager(object):
 
         return sorted(next_jobs, key=itemgetter(2), reverse=True)
 
+    def putNextJobsOnQueue(self, jobs=None):
+        print 'put next jobs on queue', '\n'
+        for j in jobs:
+            print j[0], j[1]
+
+        for job in jobs:
+            if job[0] in self.started_jobs or not self.checkIfEnoughMemory(job[4]):
+                print 'skipping job', job[0], job[1]
+                continue
+            with self.started_jobs_lock:
+                self.started_jobs.append(job[0])
+                self.availableMemory = self.availableMemory - job[4]
+
+            self._removeJobFromWorkflow(job[0], job[1])
+            #print self.jobs
+
+            thread_job = dummyThread(relval_test_process, job)
+            self.toProcessQueue.put(thread_job)
+
+        self.getNextJobsEvent.clear()
+        print 'clearing'
+        #self.finishJobsEvent.set()
+
+    def getFinishedJobs(self):
+
+        while True:
+
+
+            print 'get finished jobs', '\n'
+            print 'jobs from finished jobs', '\n', self.jobs
+            finishedJob = self.processedQueue.get()
+            self.finishJob(finishedJob)
+            #print finishedJob['id']
+            self.processedQueue.task_done()
+            self.getNextJobsEvent.set()
+
+            print 'finished get finished jobs for ', finishedJob['id'], '\n'
+
+            if not self.jobs and not self.started_jobs:
+                print 'breaking get finished jobs'
+                break
+
+
     def _removeJobFromMatrix(self, jobID=None, stepID=None, recursive=False):
         with self.jobs_lock:
             if jobID in self.jobs and (recursive or len(self.jobs[jobID])==1):
@@ -137,24 +169,35 @@ class JobsManager(object):
             if jobID in self.jobs and stepID in self.jobs[jobID]:
                 del self.jobs[jobID][stepID]
 
+    def _removeJobFromWorkflow(self, jobID=None, stepID=None):
+        with self.jobs_lock:
+            if jobID in self.jobs and stepID in self.jobs[jobID]:
+                if len(self.jobs[jobID]) == 1:
+                    self._removeWorkflow(jobID)
+                else:
+                    del self.jobs[jobID][stepID]
+
+    def _removeWorkflow(self, wf_id=None):
+        if wf_id in self.jobs:
+            del self.jobs[wf_id]
+
     def _insertRecordInResults(self, result=None):
         with self.results_lock:
             self.results.update(result)
 
     def finishJob(self, job=None):
-        print 'finish'
-        self._removeJobFromMatrix(job['id'], job['step'], job['exit_code'] is not 0)
+        print 'finish', job['id'], job['step'], job['exit_code'], job['mem']
+        self.availableMemory += job['mem']
+        #self._removeJobFromMatrix(job['id'], job['step'], job['exit_code'] is not 0)
         with self.started_jobs_lock:
             self.started_jobs.remove(job['id'])
         self._insertRecordInResults(job)
-
 
 ''' 
 the task list 
 '''
 
 if __name__ == "__main__":
-
 
 
     pass
