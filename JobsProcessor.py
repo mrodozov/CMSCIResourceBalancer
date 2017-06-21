@@ -3,8 +3,9 @@ __author__ = 'mrodozov@cern.ch'
 
 '''
 
-from threading import Thread, Event, Condition
+from threading import Thread
 import Queue
+from JobsManager import dummyThread
 from time import sleep
 
 def dummyTimeWastingTask(duration=10):
@@ -13,40 +14,6 @@ def dummyTimeWastingTask(duration=10):
         duration = duration -1
         sleep(1)
     return 'Exit code and whatever'
-
-def relval_test_process(job=None):
-    # unpack the job and execute
-    #jobID, jobStep, jobCumulativeTime, jobSelfTime, jobCommands = job.items()
-    jobID = job[0]
-    jobStep = job[1]
-    jobCumulativeTime = job[2]
-    jobSelfTime = job[3]
-    jobMem = job[4]
-    jobCommands = job[5]
-    jobSelfTime = 3
-
-    while jobSelfTime:
-        #print 'eta: ', jobID, jobStep, jobSelfTime
-        sleep(1)
-        jobSelfTime = jobSelfTime - 1
-
-    return {'id': jobID, 'step': jobStep, 'exit_code': 0, 'mem': int(jobMem)}
-
-class dummyThread(Thread):
-
-    def __init__(self, target, *args):
-        super(dummyThread, self).__init__()
-        self._target = target
-        self._args = args
-        self.name = str(args[0] + ' ' + args[1])
-        self.resultQueue = None
-
-    def run(self):
-        result = self._target(*self._args)
-        print 'result is: ', result, '\n'
-        #put the result when the task is finished
-        #result = result+' '+self.name
-        self.resultQueue.put(result)
 
 class JobsProcessor(Thread):
 
@@ -75,7 +42,6 @@ class JobsProcessor(Thread):
                 print 'finished get queue'
                 break
 
-
     def finishTasks(self):
         while True:
             result = self._processedQueue.get()
@@ -87,10 +53,8 @@ class JobsProcessor(Thread):
     def run(self):
 
         self.startProcess.start()
-        #self.finishProcess.start()
         self.startProcess.join()
-        print ''
-        #self.finishProcess.join()
+        #print ''
 
 
 if __name__ == "__main__":
