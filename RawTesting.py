@@ -61,26 +61,12 @@ if __name__ == "__main__":
     jm.toProcessQueue = toProcessQueue
     jm.processedQueue = processedTasksQueue
 
-    init_jobs = jm.getNextJobs()
-    #jm.putNextJobsOnQueue(init_jobs)
-
-    '''
-    lastjob = None
-    for i in next_jobs:
-        #print i
-        #print jm.checkIfEnoughMemory(i[4])
-        dt = dummyThread(relval_test_process, i)
-        toProcessQueue.put(dt)
-        lastjob = i
-    
-    print lastjob
-    '''
-
     getNextJobsEvent = Event()
     finishJobsEvent = Event()
 
     jp = JobsProcessor(toProcessQueue, processedTasksQueue)
     jp.allJobs = jm.jobs
+    jp.allJobs_lock = jm.jobs_lock
 
     jm.getNextJobsEvent = getNextJobsEvent
     jm.finishJobsEvent = finishJobsEvent
@@ -94,25 +80,6 @@ if __name__ == "__main__":
     jp.join()
 
 
-    '''
-    print 'again'
-    
-    mm.removeJobFromMatrix('3.0', 'step1', False)
-    next_jobs = mm.getNextJobs()
-    for i in next_jobs:
-        print i
 
-    print 'and again'
-    mm.removeJobFromMatrix( '4.23', 'step2', False)
-    next_jobs = mm.getNextJobs()
-    for i in next_jobs:
-        print i
-
-    print 'and and again'
-    mm.removeJobFromMatrix( '3.0', 'step1', True)
-    next_jobs = mm.getNextJobs()
-    for i in next_jobs:
-        print i
-   '''
 
 

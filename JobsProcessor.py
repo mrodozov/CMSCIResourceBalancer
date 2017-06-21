@@ -23,7 +23,7 @@ def relval_test_process(job=None):
     jobSelfTime = job[3]
     jobMem = job[4]
     jobCommands = job[5]
-    jobSelfTime = 20 / 10
+    jobSelfTime = 3
 
     while jobSelfTime:
         #print 'eta: ', jobID, jobStep, jobSelfTime
@@ -55,6 +55,7 @@ class JobsProcessor(Thread):
         self._toProcessQueue = to_process_queue
         self._processedQueue = processed_queue
         self.allJobs = None
+        self.allJobs_lock = None
         self.startProcess = Thread(target=self.startTasks)
         self.finishProcess = Thread(target=self.finishTasks)
 
@@ -69,7 +70,8 @@ class JobsProcessor(Thread):
             #self.finish
             print 'size of jobs:', len(self.allJobs), "\n"
                 #, self.allJobs
-            if not self.allJobs:
+
+            if not self.allJobs and self._toProcessQueue.empty():
                 print 'finished get queue'
                 break
 

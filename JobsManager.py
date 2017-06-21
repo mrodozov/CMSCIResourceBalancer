@@ -21,9 +21,9 @@ def relval_test_process(job=None):
     jobSelfTime = job[3]
     jobMem = job[4]
     jobCommands = job[5]
-    jobSelfTime = 20 / 10
+    jobSelfTime = 1
 
-    while jobSelfTime:
+    while jobSelfTime > 0:
         #print 'eta: ', jobID, jobStep, jobSelfTime
         sleep(1)
         jobSelfTime = jobSelfTime - 1
@@ -68,8 +68,7 @@ class JobsManager(object):
         self.toProcessQueue = None
         self.processedQueue = None
         self.getNextJobsEvent = None
-        self.finishJobsEvent = None
-        self.allJobsConsumed = Event()
+
 
         # alrighty, try it with semaphore
 
@@ -88,9 +87,10 @@ class JobsManager(object):
 
         while True:
 
-            if not self.jobs:
-                print 'to process queue completed, breaking put jobs on queue', '\n'
-                break
+            with self.jobs_lock:
+                if not self.jobs:
+                    print 'to process queue completed, breaking put jobs on queue', '\n'
+                    break
 
             #get jobs from the structure put them on queue to process
             next_jobs = self.getNextJobs()
@@ -148,18 +148,21 @@ class JobsManager(object):
 
 
             print 'get finished jobs', '\n'
-            print 'jobs from finished jobs', '\n', self.jobs
+            #print 'jobs from finished jobs', '\n', self.jobs
             finishedJob = self.processedQueue.get()
             self.finishJob(finishedJob)
+
             #print finishedJob['id']
             self.processedQueue.task_done()
             self.getNextJobsEvent.set()
 
             print 'finished get finished jobs for ', finishedJob['id'], '\n'
 
-            if not self.jobs and not self.started_jobs:
-                print 'breaking get finished jobs'
-                break
+            with self.jobs_lock:
+                with self.started_jobs_lock:
+                    if not self.jobs and not self.started_jobs:
+                        print 'breaking get finished jobs'
+                        break
 
 
     def _removeJobFromMatrix(self, jobID=None, stepID=None, recursive=False):
