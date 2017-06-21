@@ -96,14 +96,8 @@ class JobsManager(object):
 
             #get jobs from the structure put them on queue to process
             next_jobs = self.getNextJobs()
-            print 'put jobs on queue getting next jobs:', '\n'
-            #print next_jobs
-            #if len(next_jobs):
+            print 'put jobs on queue getting next jobs:', '\n'#, next_jobs
             self.putNextJobsOnQueue(next_jobs)
-            #if self.jobs:
-                #print 'there are jobs'
-                #print self.jobs[]
-
             self.getNextJobsEvent.wait()
 
     def getNextJobs(self, sort_function=None):
@@ -127,14 +121,14 @@ class JobsManager(object):
             print j[0], j[1]
 
         for job in jobs:
-            if job[0] in self.started_jobs or not self.checkIfEnoughMemory(job[4]):
-                print 'skipping job', job[0], job[1]
-                continue
             with self.started_jobs_lock:
+                if job[0] in self.started_jobs or not self.checkIfEnoughMemory(job[4]):
+                    print 'skipping job', job[0], job[1]
+                    continue
                 self.started_jobs.append(job[0])
                 self.availableMemory = self.availableMemory - job[4]
-            thread_job = dummyThread(relval_test_process, job)
-            self.toProcessQueue.put(thread_job)
+                thread_job = dummyThread(relval_test_process, job)
+                self.toProcessQueue.put(thread_job)
             self._removeJobFromWorkflow(job[0], job[1])
             #print self.jobs
 
@@ -152,9 +146,9 @@ class JobsManager(object):
 
             print 'get finished jobs', '\n'
             #print 'jobs from finished jobs', '\n', self.jobs
+
             finishedJob = self.processedQueue.get()
             self.finishJob(finishedJob)
-
             #print finishedJob['id']
             self.processedQueue.task_done()
             self.getNextJobsEvent.set()
@@ -191,6 +185,9 @@ class JobsManager(object):
     def _insertRecordInResults(self, result=None):
         with self.results_lock:
             self.results.update(result)
+
+
+
 
 
 ''' 

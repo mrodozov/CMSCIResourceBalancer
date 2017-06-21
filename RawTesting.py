@@ -63,7 +63,7 @@ if __name__ == "__main__":
 
     jp = JobsProcessor(toProcessQueue, processedTasksQueue)
     jp.allJobs = jm.jobs
-    jp.allJobs_lock = jm.jobs_lock
+    #jp.allJobs_lock = jm.jobs_lock
 
     jm.getNextJobsEvent = getNextJobsEvent
     jm.finishJobsEvent = finishJobsEvent
