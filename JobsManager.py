@@ -8,6 +8,7 @@ from threading import Lock, Thread
 from time import sleep
 from operator import itemgetter
 import psutil
+import json
 
 '''
 method putNextJobsOnQueue may need to use another lock
@@ -27,12 +28,12 @@ def relval_test_process(job=None):
     jobSelfTime = job[3]
     jobMem = job[4]
     jobCommands = job[5]
-    jobSelfTime = 0.001
+    jobSelfTime = 1
 
     while jobSelfTime > 0:
         #print 'eta: ', jobID, jobStep, jobSelfTime
-        sleep(0.001)
-        jobSelfTime = jobSelfTime - 0.001
+        sleep(1)
+        jobSelfTime = jobSelfTime - 1
 
     return {'id': jobID, 'step': jobStep, 'exit_code': 0, 'mem': int(jobMem)}
 
@@ -102,15 +103,16 @@ class JobsManager(object):
 
     def getNextJobs(self, sort_function=None):
         next_jobs = []
-        with self.jobs_lock:
-            for i in self.jobs:
-                if not self.jobs[i].keys():
-                    continue
-                current_step = sorted( self.jobs[i].keys() )[0]
-                cumulative_time = sum([self.jobs[i][j]['avg_time'] for j in self.jobs[i]])
-                element = (i, current_step, cumulative_time, self.jobs[i][current_step]['avg_time'],
-                           self.jobs[i][current_step]['avg_mem'], self.jobs[i][current_step]['commands'])
-                next_jobs.append(element)
+
+        for i in self.jobs:
+            if not self.jobs[i].keys():
+                continue
+            current_step = sorted( self.jobs[i].keys() )[0]
+            cumulative_time = sum([self.jobs[i][j]['avg_time'] for j in self.jobs[i]])
+            element = (i, current_step, cumulative_time, self.jobs[i][current_step]['avg_time'],
+                       self.jobs[i][current_step]['avg_mem'], self.jobs[i][current_step]['commands'])
+
+            next_jobs.append(element)
                 #print i, j, self.jobs[i][j]['avg_time']
 
         return sorted(next_jobs, key=itemgetter(2), reverse=True)
@@ -121,10 +123,11 @@ class JobsManager(object):
             print j[0], j[1]
 
         for job in jobs:
+            if job[0] in self.started_jobs or not self.checkIfEnoughMemory(job[4]):
+                print 'skipping job', job[0], job[1]
+                continue
+
             with self.started_jobs_lock:
-                if job[0] in self.started_jobs or not self.checkIfEnoughMemory(job[4]):
-                    print 'skipping job', job[0], job[1]
-                    continue
                 self.started_jobs.append(job[0])
                 self.availableMemory = self.availableMemory - job[4]
                 thread_job = dummyThread(relval_test_process, job)
@@ -161,8 +164,9 @@ class JobsManager(object):
 
     def finishJob(self, job=None):
         print 'finish', job['id'], job['step'], job['exit_code'], job['mem']
-        self.availableMemory += job['mem']
         with self.started_jobs_lock:
+            #print 'blocks because of the lock'
+            self.availableMemory += job['mem']
             self.started_jobs.remove(job['id'])
         self._insertRecordInResults(job)
 
@@ -184,7 +188,15 @@ class JobsManager(object):
 
     def _insertRecordInResults(self, result=None):
         with self.results_lock:
-            self.results.update(result)
+            if not result['id'] in self.results:
+                self.results[result['id']] = {}
+            self.results[result['id']][result['step']] = {'exit_code': result['exit_code'], 'other_result_data': ''}
+
+    def writeResultsInFile(self, file=None):
+        with self.results_lock:
+            with open(file, 'w') as results_file:
+                results_file.write(json.dumps(self.results, indent=1, sort_keys=True))
+
 
 
 

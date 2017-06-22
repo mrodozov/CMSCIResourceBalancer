@@ -45,7 +45,7 @@ if __name__ == "__main__":
     opts.arch = 'slc6_amd64_gcc530'
     opts.days = 7
     opts.page_size = 0
-
+    
     ''' here the program is tested  '''
 
     toProcessQueue = Queue.Queue()
@@ -76,6 +76,9 @@ if __name__ == "__main__":
     jm.getProcessedJobs.join()
     jp.join()
 
+    print jm.results
+
+    jm.writeResultsInFile('jobs_results.json')
 
 
 
