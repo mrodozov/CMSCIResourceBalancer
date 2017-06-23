@@ -5,7 +5,7 @@ __author__ = 'mrodozov@cern.ch'
 
 from threading import Thread
 import Queue
-from JobsManager import dummyThread
+from JobsManager import workingThread
 from time import sleep
 
 def dummyTimeWastingTask(duration=10):
@@ -25,7 +25,7 @@ class JobsProcessor(Thread):
         self.allJobs_lock = None
         self.startProcess = Thread(target=self.startTasks)
         self.finishProcess = Thread(target=self.finishTasks)
-
+    
     def startTasks(self):
         while True:
 
@@ -62,11 +62,11 @@ if __name__ == "__main__":
     toProcessQueue = Queue.Queue()
     processedTasksQueue = Queue.Queue()
 
-    dthread1 = dummyThread(dummyTimeWastingTask, 10)
+    dthread1 = workingThread(dummyTimeWastingTask, 10)
     dthread1.name = 'first'
-    dthread2 = dummyThread(dummyTimeWastingTask, 15)
+    dthread2 = workingThread(dummyTimeWastingTask, 15)
     dthread2.name = 'second'
-    dthread3 = dummyThread(dummyTimeWastingTask, 20)
+    dthread3 = workingThread(dummyTimeWastingTask, 20)
     dthread3.name = 'third'
 
     toProcessQueue.put(dthread1)

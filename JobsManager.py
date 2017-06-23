@@ -4,7 +4,7 @@ This class instance(singleton) manages jobs ordering
 '''
 
 from Singleton import Singleton
-from threading import Lock, Thread
+from threading import Lock, Thread, Semaphore
 from time import sleep
 from operator import itemgetter
 import psutil
@@ -28,19 +28,22 @@ def relval_test_process(job=None):
     jobSelfTime = job[3]
     jobMem = job[4]
     jobCommands = job[5]
-    jobSelfTime = 1
-
-    while jobSelfTime > 0:
+    jobSelfTime = 0.001
+    
+    while True:
         #print 'eta: ', jobID, jobStep, jobSelfTime
-        sleep(1)
-        jobSelfTime = jobSelfTime - 1
+        sleep(jobSelfTime)
+        jobSelfTime -= 0.001
+        if 0 > jobSelfTime:
+            print 'breaking'
+            break
 
     return {'id': jobID, 'step': jobStep, 'exit_code': 0, 'mem': int(jobMem)}
 
-class dummyThread(Thread):
+class workingThread(Thread):
 
     def __init__(self, target, *args):
-        super(dummyThread, self).__init__()
+        super(workingThread, self).__init__()
         self._target = target
         self._args = args
         #self.name = str(args[0] + ' ' + args[1])
@@ -54,14 +57,14 @@ class dummyThread(Thread):
         self.resultQueue.put(result)
 
 class JobsManager(object):
-
+    
     __metaclass__ = Singleton
 
     def __init__(self, jobs=None):
         self.jobs = jobs
         self.started_jobs = None
         self.results = {}
-        self.availableMemory = psutil.virtual_memory()[1]
+        self.availableMemory = None
         self.jobs_lock = Lock() # lock when touching jobs structure
         self.started_jobs_lock = Lock()
         self.results_lock = Lock() # lock when touching results structure
@@ -75,7 +78,7 @@ class JobsManager(object):
         self.toProcessQueue = None
         self.processedQueue = None
         self.getNextJobsEvent = None
-
+        self.counter = Semaphore()
 
     '''
     methods to check resources availability
@@ -99,7 +102,7 @@ class JobsManager(object):
             next_jobs = self.getNextJobs()
             print 'put jobs on queue getting next jobs:', '\n'#, next_jobs
             self.putNextJobsOnQueue(next_jobs)
-            self.getNextJobsEvent.wait()
+            #self.getNextJobsEvent.wait()
 
     def getNextJobs(self, sort_function=None):
         next_jobs = []
@@ -123,19 +126,19 @@ class JobsManager(object):
             print j[0], j[1]
 
         for job in jobs:
-            if job[0] in self.started_jobs or not self.checkIfEnoughMemory(job[4]):
+            if job[0] in self.started_jobs and self.checkIfEnoughMemory(job[4]):
                 print 'skipping job', job[0], job[1]
                 continue
 
             with self.started_jobs_lock:
                 self.started_jobs.append(job[0])
                 self.availableMemory = self.availableMemory - job[4]
-                thread_job = dummyThread(relval_test_process, job)
+                thread_job = workingThread(relval_test_process, job)
                 self.toProcessQueue.put(thread_job)
             self._removeJobFromWorkflow(job[0], job[1])
             #print self.jobs
 
-        self.getNextJobsEvent.clear()
+        sleep(0.01)
         print 'clearing'
         #self.finishJobsEvent.set()
 
@@ -158,6 +161,7 @@ class JobsManager(object):
 
             print 'finished get finished jobs for ', finishedJob['id'], '\n'
 
+
             if not self.jobs and not self.started_jobs:
                 print 'breaking get finished jobs'
                 break
@@ -168,7 +172,9 @@ class JobsManager(object):
             #print 'blocks because of the lock'
             self.availableMemory += job['mem']
             self.started_jobs.remove(job['id'])
+            print 'job removed: ', job['id']
         self._insertRecordInResults(job)
+
 
     '''
     

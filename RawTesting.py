@@ -12,7 +12,7 @@ from JobsProcessor import JobsProcessor
 from threading import Event
 import Queue
 from optparse import OptionParser
-
+import psutil
 
 if __name__ == "__main__":
 
@@ -48,6 +48,8 @@ if __name__ == "__main__":
     
     ''' here the program is tested  '''
 
+    avmem = psutil.virtual_memory()[1]
+
     toProcessQueue = Queue.Queue()
     processedTasksQueue = Queue.Queue()
 
@@ -60,6 +62,7 @@ if __name__ == "__main__":
     jm = JobsManager(matrixMap)
     jm.toProcessQueue = toProcessQueue
     jm.processedQueue = processedTasksQueue
+    jm.availableMemory = avmem
 
     jp = JobsProcessor(toProcessQueue, processedTasksQueue)
     jp.allJobs = jm.jobs
