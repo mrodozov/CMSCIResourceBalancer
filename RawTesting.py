@@ -5,7 +5,7 @@ This file is for raw test anything
 from os.path import dirname, abspath
 from sys import argv
 from commands import getstatusoutput
-import ResourcePool
+#import ResourcePool
 from JobsConstructor import JobsConstructor
 from JobsManager import JobsManager
 from JobsProcessor import JobsProcessor
@@ -48,7 +48,7 @@ if __name__ == "__main__":
     
     ''' here the program is tested  '''
 
-    avmem = psutil.virtual_memory()[1]
+    avg_mem = psutil.virtual_memory()[1]
 
     toProcessQueue = Queue.Queue()
     processedTasksQueue = Queue.Queue()
@@ -62,22 +62,29 @@ if __name__ == "__main__":
     jm = JobsManager(matrixMap)
     jm.toProcessQueue = toProcessQueue
     jm.processedQueue = processedTasksQueue
-    jm.availableMemory = avmem
+    jm.availableMemory = avg_mem
 
     jp = JobsProcessor(toProcessQueue, processedTasksQueue)
     jp.allJobs = jm.jobs
-    #jp.allJobs_lock = jm.jobs_lock
+    jp.allJobs_lock = jm.jobs_lock
 
     jm.getNextJobsEvent = getNextJobsEvent
     jm.finishJobsEvent = finishJobsEvent
 
     jm.putJobsOnProcessQueue.start()
-    jm.getProcessedJobs.start()
     jp.start()
+    jm.getProcessedJobs.start()
 
+
+    print 'put jobs on queue tries to join'
     jm.putJobsOnProcessQueue.join()
-    jm.getProcessedJobs.join()
+
+    print 'processor tries to join:'
     jp.join()
+
+    print 'finish jobs tries to join'
+    jm.getProcessedJobs.join()
+
 
     print jm.results
 

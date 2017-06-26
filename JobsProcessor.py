@@ -5,7 +5,7 @@ __author__ = 'mrodozov@cern.ch'
 
 from threading import Thread
 import Queue
-from JobsManager import workingThread
+from JobsManager import workerThread
 from time import sleep
 
 def dummyTimeWastingTask(duration=10):
@@ -24,10 +24,15 @@ class JobsProcessor(Thread):
         self.allJobs = None
         self.allJobs_lock = None
         self.startProcess = Thread(target=self.startTasks)
-        self.finishProcess = Thread(target=self.finishTasks)
+        #self.finishProcess = Thread(target=self.finishTasks)
     
     def startTasks(self):
         while True:
+
+            with self.allJobs_lock:
+                if not self.allJobs and self._toProcessQueue.empty():
+                    print 'finished get QUEUE'
+                    break
 
             task = self._toProcessQueue.get()
             task.resultQueue = self._processedQueue
@@ -37,18 +42,6 @@ class JobsProcessor(Thread):
             #self.finish
             print 'size of jobs:', len(self.allJobs), "\n"
                 #, self.allJobs
-
-            if not self.allJobs and self._toProcessQueue.empty():
-                print 'finished get queue'
-                break
-
-    def finishTasks(self):
-        while True:
-            result = self._processedQueue.get()
-            print 'finishing task', result['id'], result['step']
-            if self._processedQueue.empty() and not self.allJobs:
-                print 'finished put queue'
-                break
 
     def run(self):
 
@@ -62,11 +55,11 @@ if __name__ == "__main__":
     toProcessQueue = Queue.Queue()
     processedTasksQueue = Queue.Queue()
 
-    dthread1 = workingThread(dummyTimeWastingTask, 10)
+    dthread1 = workerThread(dummyTimeWastingTask, 10)
     dthread1.name = 'first'
-    dthread2 = workingThread(dummyTimeWastingTask, 15)
+    dthread2 = workerThread(dummyTimeWastingTask, 15)
     dthread2.name = 'second'
-    dthread3 = workingThread(dummyTimeWastingTask, 20)
+    dthread3 = workerThread(dummyTimeWastingTask, 20)
     dthread3.name = 'third'
 
     toProcessQueue.put(dthread1)

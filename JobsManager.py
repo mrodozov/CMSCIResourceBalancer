@@ -9,6 +9,7 @@ from time import sleep
 from operator import itemgetter
 import psutil
 import json
+import subprocess
 
 '''
 method putNextJobsOnQueue may need to use another lock
@@ -17,7 +18,6 @@ get called more than once while putNextJobsOnQueue is still
 executing 
 
 '''
-
 
 def relval_test_process(job=None):
     # unpack the job and execute
@@ -29,7 +29,7 @@ def relval_test_process(job=None):
     jobMem = job[4]
     jobCommands = job[5]
     jobSelfTime = 0.001
-    
+
     while True:
         #print 'eta: ', jobID, jobStep, jobSelfTime
         sleep(jobSelfTime)
@@ -40,10 +40,45 @@ def relval_test_process(job=None):
 
     return {'id': jobID, 'step': jobStep, 'exit_code': 0, 'mem': int(jobMem)}
 
-class workingThread(Thread):
+
+def process_relval_workflow_step(job=None):
+    # unpack the job and execute
+    #jobID, jobStep, jobCumulativeTime, jobSelfTime, jobCommands = job.items()
+    jobID = job[0]
+    jobStep = job[1]
+    jobCumulativeTime = job[2]
+    jobSelfTime = job[3]
+    jobMem = job[4]
+    jobCommands = job[5]
+    prevJobExit = job[6]
+    jobCommands = 'ls'
+
+    exit_code = 0 #child_process.returncode
+
+    if prevJobExit is not 0:
+        return {'id': jobID, 'step': jobStep, 'exit_code': 'notRun', 'mem': int(jobMem), 'stdout': 'notRun',
+            'stderr': 'notRun'}
+
+    child_process = subprocess.Popen(jobCommands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                     close_fds=True)
+    stdout, stderr = child_process.communicate()
+    #to test the non zero exit code
+    if jobStep == 'step2':
+        exit_code = -1
+
+    return {'id': jobID, 'step': jobStep, 'exit_code': exit_code, 'mem': int(jobMem), 'stdout': stdout,
+            'stderr': stderr}
+    #start a subprocess, return it's output
+
+def finilazeWorkflow(workflowID=None):
+
+    pass
+
+
+class workerThread(Thread):
 
     def __init__(self, target, *args):
-        super(workingThread, self).__init__()
+        super(workerThread, self).__init__()
         self._target = target
         self._args = args
         #self.name = str(args[0] + ' ' + args[1])
@@ -106,16 +141,26 @@ class JobsManager(object):
 
     def getNextJobs(self, sort_function=None):
         next_jobs = []
+        with self.jobs_lock:
+            for i in self.jobs:
 
-        for i in self.jobs:
-            if not self.jobs[i].keys():
-                continue
-            current_step = sorted( self.jobs[i].keys() )[0]
-            cumulative_time = sum([self.jobs[i][j]['avg_time'] for j in self.jobs[i]])
-            element = (i, current_step, cumulative_time, self.jobs[i][current_step]['avg_time'],
-                       self.jobs[i][current_step]['avg_mem'], self.jobs[i][current_step]['commands'])
+                if not self.jobs[i].keys():
+                    continue
 
-            next_jobs.append(element)
+                prev_exit = 0
+                with self.results_lock:
+                    if i in self.results:
+                        for s in self.results[i]:
+                            if self.results[i][s]['exit_code'] is not 0:
+                                prev_exit = self.results[i][s]['exit_code']
+                                break
+
+                current_step = sorted( self.jobs[i].keys() )[0]
+                cumulative_time = sum([self.jobs[i][j]['avg_time'] for j in self.jobs[i]])
+                element = (i, current_step, cumulative_time, self.jobs[i][current_step]['avg_time'],
+                           self.jobs[i][current_step]['avg_mem'], self.jobs[i][current_step]['commands'], prev_exit)
+
+                next_jobs.append(element)
                 #print i, j, self.jobs[i][j]['avg_time']
 
         return sorted(next_jobs, key=itemgetter(2), reverse=True)
@@ -126,19 +171,22 @@ class JobsManager(object):
             print j[0], j[1]
 
         for job in jobs:
-            if job[0] in self.started_jobs and self.checkIfEnoughMemory(job[4]):
+
+
+
+            if job[0] in self.started_jobs or not self.checkIfEnoughMemory(job[4]):
                 print 'skipping job', job[0], job[1]
                 continue
 
             with self.started_jobs_lock:
                 self.started_jobs.append(job[0])
                 self.availableMemory = self.availableMemory - job[4]
-                thread_job = workingThread(relval_test_process, job)
+                thread_job = workerThread(process_relval_workflow_step, job)
                 self.toProcessQueue.put(thread_job)
             self._removeJobFromWorkflow(job[0], job[1])
             #print self.jobs
 
-        sleep(0.01)
+        sleep(0.001)
         print 'clearing'
         #self.finishJobsEvent.set()
 
@@ -157,10 +205,9 @@ class JobsManager(object):
             self.finishJob(finishedJob)
             #print finishedJob['id']
             self.processedQueue.task_done()
-            self.getNextJobsEvent.set()
+            #self.getNextJobsEvent.set()
 
             print 'finished get finished jobs for ', finishedJob['id'], '\n'
-
 
             if not self.jobs and not self.started_jobs:
                 print 'breaking get finished jobs'
@@ -168,23 +215,36 @@ class JobsManager(object):
 
     def finishJob(self, job=None):
         print 'finish', job['id'], job['step'], job['exit_code'], job['mem']
+
+        self._insertRecordInResults(job)
+        #insert the record before removing the job since it might remove the entire job
+
+
         with self.started_jobs_lock:
             #print 'blocks because of the lock'
             self.availableMemory += job['mem']
             self.started_jobs.remove(job['id'])
             print 'job removed: ', job['id']
-        self._insertRecordInResults(job)
 
+        #self._removeJobFromWorkflow(job['id'], job['id'])
 
+        #finish the workflow if the step was the last
+
+        with self.jobs_lock:
+            if not job['id'] in self.jobs:
+                print 'finalize wf:', job['id']
+                with self.results_lock:
+                    finilazeWorkflow(job['id'])
+                    self.results[job['id']]['finishing_exit'] = 'finished'
+    '''
     '''
     
-    '''
-
     def _removeJobFromWorkflow(self, jobID=None, stepID=None):
         with self.jobs_lock:
             if jobID in self.jobs and stepID in self.jobs[jobID]:
                 if len(self.jobs[jobID]) == 1:
                     self._removeWorkflow(jobID)
+
                 else:
                     del self.jobs[jobID][stepID]
 
@@ -193,18 +253,25 @@ class JobsManager(object):
             del self.jobs[wf_id]
 
     def _insertRecordInResults(self, result=None):
+
         with self.results_lock:
             if not result['id'] in self.results:
                 self.results[result['id']] = {}
-            self.results[result['id']][result['step']] = {'exit_code': result['exit_code'], 'other_result_data': ''}
+            #if result['exit_code'] is not
+
+            self.results[result['id']][result['step']] = {'exit_code': result['exit_code'], 'stdout': result['stdout'],
+                                                          'stderr':result['stderr']}
+            '''
+            if int(result['exit_code']) is not 0:
+                list_of_steps = [step for step in self.jobs[result['id']]]
+                for step in list_of_steps:
+                    self.results[result['id']][step] = {'exit_code': 'notRun', 'stdout': 'notRun', 'stderr': 'notRun'}
+            '''
 
     def writeResultsInFile(self, file=None):
         with self.results_lock:
             with open(file, 'w') as results_file:
                 results_file.write(json.dumps(self.results, indent=1, sort_keys=True))
-
-
-
 
 
 
