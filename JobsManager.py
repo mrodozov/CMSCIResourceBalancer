@@ -51,7 +51,7 @@ def process_relval_workflow_step(job=None):
     jobMem = job[4]
     jobCommands = job[5]
     prevJobExit = job[6]
-    jobCommands = 'ls'
+    #jobCommands = 'ls'
 
     exit_code = 0 #child_process.returncode
 
@@ -63,12 +63,12 @@ def process_relval_workflow_step(job=None):
                                      close_fds=True)
     stdout, stderr = child_process.communicate()
     #to test the non zero exit code
-    if jobStep == 'step2':
-        exit_code = -1
 
     return {'id': jobID, 'step': jobStep, 'exit_code': exit_code, 'mem': int(jobMem), 'stdout': stdout,
             'stderr': stderr}
     #start a subprocess, return it's output
+
+
 
 def finilazeWorkflow(workflowID=None):
 
@@ -172,6 +172,8 @@ class JobsManager(object):
 
         for job in jobs:
 
+
+
             if job[0] in self.started_jobs or not self.checkIfEnoughMemory(job[4]):
                 print 'skipping job', job[0], job[1]
                 continue
@@ -179,7 +181,6 @@ class JobsManager(object):
             with self.started_jobs_lock:
                 self.started_jobs.append(job[0])
                 self.availableMemory = self.availableMemory - job[4]
-            with self.jobs_lock:
                 thread_job = workerThread(process_relval_workflow_step, job)
                 self.toProcessQueue.put(thread_job)
             self._removeJobFromWorkflow(job[0], job[1])

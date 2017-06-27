@@ -104,7 +104,7 @@ class JobsConstructor(object):
 
         return json_out[0]['hits']['hits']
 
-    def getJobsCommands(self, workflow_matrix_list=None):
+    def getJobsCommands(self, workflow_matrix_list=None, workflows_limit=None):
         #run runTheMatrix and parse the output for each workflow, example results structure in resources/wf.json
         #for now, get it from the file resources/wf.json
         #run_matrix_process = subprocess.Popen('runTheMatrix.py -l '+workflow_matrix_list+' -i all --maxSteps=0',
@@ -116,6 +116,7 @@ class JobsConstructor(object):
         #print os.listdir(wf_base_folder)
         matrix_map = {}
         #print wf_folders
+        counter = 0
         for f in wf_folders:
             #print f
             wf_id = f.split('_')[0]
@@ -128,6 +129,9 @@ class JobsConstructor(object):
                     #print stepID
                     #print stepCommands
                     matrix_map[wf_id][stepID] = {'description':[], 'commands': stepCommands}
+            counter += 1
+            if workflows_limit and counter > workflows_limit:
+                break
             #print wf_id
         #print json.dumps(matrix_map, indent=1, sort_keys=True)
         #
@@ -136,8 +140,8 @@ class JobsConstructor(object):
         return matrix_map
 
 
-    def constructJobsMatrix(self, release, arch, days, page_size, workflow_matrix_list):
-        jobs_ids_and_commands = self.getJobsCommands(workflow_matrix_list)
+    def constructJobsMatrix(self, release, arch, days, page_size, workflow_matrix_list, wf_limit):
+        jobs_ids_and_commands = self.getJobsCommands(workflow_matrix_list, wf_limit)
         jobs_stats = self.getWorkflowStatsFromES(release, arch, days, page_size)
         #for local test get the stats from a file
         #with open('resources/exampleESqueryResult.json') as esQueryFromFile:
@@ -187,6 +191,8 @@ if __name__ == "__main__":
     jc.getJobsCommands(wf_list)
     
     #print wf_list
-    
-    json_out = jc.constructJobsMatrix(release, arch, days, page_size, wf_list)
+
+    limit = 20
+
+    json_out = jc.constructJobsMatrix(release, arch, days, page_size, wf_list, limit)
     print json.dumps(json_out, indent=2, sort_keys=True, separators=(',', ': '))
