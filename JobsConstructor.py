@@ -111,12 +111,16 @@ class JobsConstructor(object):
         #                                      shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         #                                      close_fds=True)
         #stdout, stderr = run_matrix_process.communicate()
-        wf_base_folder = 'resources/wf_folders/'
+        wf_base_folder = '/build/mrodozov/testScheduler/CMSCIResourceBalancer/'
         wf_folders = [fld for fld in os.listdir(wf_base_folder) if os.path.isdir(wf_base_folder+fld)]
-        #print os.listdir('resources/wf_folders')
+        #print os.listdir(wf_base_folder)
         matrix_map = {}
+        #print wf_folders
         for f in wf_folders:
+            #print f
             wf_id = f.split('_')[0]
+            if not os.path.exists(os.path.join(wf_base_folder, f, 'wf_steps.txt')):
+                continue
             matrix_map[wf_id] = {}
             with open(os.path.join(wf_base_folder, f, 'wf_steps.txt')) as wf_file:
                 for line in wf_file.readlines():
@@ -125,7 +129,7 @@ class JobsConstructor(object):
                     #print stepCommands
                     matrix_map[wf_id][stepID] = {'description':[], 'commands': stepCommands}
             #print wf_id
-        print json.dumps(matrix_map, indent=1, sort_keys=True)
+        #print json.dumps(matrix_map, indent=1, sort_keys=True)
         #
         #with open('resources/wf.json') as matrixFile:
         #    matrixMap = json.loads(matrixFile.read())
@@ -134,7 +138,8 @@ class JobsConstructor(object):
 
     def constructJobsMatrix(self, release, arch, days, page_size, workflow_matrix_list):
         jobs_ids_and_commands = self.getJobsCommands(workflow_matrix_list)
-        jobs_stats = self.getWorkflowStatsFromES(release, arch, days, page_size) # remove this
+        jobs_stats = self.getWorkflowStatsFromES(release, arch, days, page_size)
+        #for local test get the stats from a file
         #with open('resources/exampleESqueryResult.json') as esQueryFromFile:
         #    jobs_stats = json.loads(esQueryFromFile.read())[0]['hits']['hits']
 
@@ -155,8 +160,12 @@ class JobsConstructor(object):
                 for rec in matrixMap[wf_id][step_id]['description']:
                     countTime += int(rec['time'])
                     countMem += int(rec['rss_avg'])
-                matrixMap[wf_id][step_id]['avg_time'] = countTime / nKeys
-                matrixMap[wf_id][step_id]['avg_mem'] = countMem / nKeys
+                if nKeys > 0:
+                    matrixMap[wf_id][step_id]['avg_time'] = countTime / nKeys
+                    matrixMap[wf_id][step_id]['avg_mem'] = countMem / nKeys
+                else:
+                    matrixMap[wf_id][step_id]['avg_time'] = 21600
+                    matrixMap[wf_id][step_id]['avg_mem'] = 4500000000
 
         return matrixMap
 
@@ -174,10 +183,10 @@ if __name__ == "__main__":
         wf_list = wf_list[:-1]
 
 
-    #jc = JobsConstructor()
-    #jc.getJobsCommands()
-
-    print wf_list
-
-    #json_out = jc.constructJobsMatrix(release, arch, days, page_size, None)
-    #print json.dumps(json_out, indent=2, sort_keys=True, separators=(',', ': '))
+    jc = JobsConstructor(wf_list)
+    jc.getJobsCommands(wf_list)
+    
+    #print wf_list
+    
+    json_out = jc.constructJobsMatrix(release, arch, days, page_size, wf_list)
+    print json.dumps(json_out, indent=2, sort_keys=True, separators=(',', ': '))

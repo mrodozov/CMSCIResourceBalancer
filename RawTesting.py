@@ -54,7 +54,10 @@ if __name__ == "__main__":
 
     ''' here the program is tested  '''
 
-    avg_mem = psutil.virtual_memory()[1]
+    avg_mem = 0.95*psutil.virtual_memory()[0]
+    
+    #print psutil.virtual_memory()[]
+    #exit(0)
 
     toProcessQueue = Queue.Queue()
     processedTasksQueue = Queue.Queue()
