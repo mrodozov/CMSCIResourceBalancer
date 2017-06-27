@@ -45,7 +45,13 @@ if __name__ == "__main__":
     opts.arch = 'slc6_amd64_gcc530'
     opts.days = 7
     opts.page_size = 0
-    
+
+    wf_list = None
+
+    with open('resources/wf_slc6_530.txt') as wf_list_file:
+        wf_list = wf_list_file.read().replace('\n', ',')
+        wf_list = wf_list[:-1]
+
     ''' here the program is tested  '''
 
     avg_mem = psutil.virtual_memory()[1]
@@ -57,7 +63,7 @@ if __name__ == "__main__":
     finishJobsEvent = Event()
 
     jc = JobsConstructor()
-    matrixMap =jc.constructJobsMatrix(opts.release, opts.arch, opts.days, opts.page_size, None)
+    matrixMap =jc.constructJobsMatrix(opts.release, opts.arch, opts.days, opts.page_size, wf_list)
 
     jm = JobsManager(matrixMap)
     jm.toProcessQueue = toProcessQueue
@@ -90,6 +96,7 @@ if __name__ == "__main__":
 
     jm.writeResultsInFile('jobs_results.json')
 
+    print wf_list
 
 
 

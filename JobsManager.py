@@ -172,8 +172,6 @@ class JobsManager(object):
 
         for job in jobs:
 
-
-
             if job[0] in self.started_jobs or not self.checkIfEnoughMemory(job[4]):
                 print 'skipping job', job[0], job[1]
                 continue
@@ -181,6 +179,7 @@ class JobsManager(object):
             with self.started_jobs_lock:
                 self.started_jobs.append(job[0])
                 self.availableMemory = self.availableMemory - job[4]
+            with self.jobs_lock:
                 thread_job = workerThread(process_relval_workflow_step, job)
                 self.toProcessQueue.put(thread_job)
             self._removeJobFromWorkflow(job[0], job[1])

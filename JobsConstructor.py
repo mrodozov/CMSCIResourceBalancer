@@ -11,6 +11,8 @@ import json
 from Singleton import Singleton
 from es_utils import get_payload
 from time import time
+import subprocess
+import os
 
 class JobsConstructor(object):
 
@@ -102,18 +104,39 @@ class JobsConstructor(object):
 
         return json_out[0]['hits']['hits']
 
-    def getJobsCommands(self, workflow_matrix=None):
+    def getJobsCommands(self, workflow_matrix_list=None):
         #run runTheMatrix and parse the output for each workflow, example results structure in resources/wf.json
         #for now, get it from the file resources/wf.json
-        with open('resources/wf.json') as matrixFile:
-            matrixMap = json.loads(matrixFile.read())
-        return matrixMap
+        #run_matrix_process = subprocess.Popen('runTheMatrix.py -l '+workflow_matrix_list+' -i all --maxSteps=0',
+        #                                      shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        #                                      close_fds=True)
+        #stdout, stderr = run_matrix_process.communicate()
+        wf_base_folder = 'resources/wf_folders/'
+        wf_folders = [fld for fld in os.listdir(wf_base_folder) if os.path.isdir(wf_base_folder+fld)]
+        #print os.listdir('resources/wf_folders')
+        matrix_map = {}
+        for f in wf_folders:
+            wf_id = f.split('_')[0]
+            matrix_map[wf_id] = {}
+            with open(os.path.join(wf_base_folder, f, 'wf_steps.txt')) as wf_file:
+                for line in wf_file.readlines():
+                    stepID, stepCommands = line.split(':',1)
+                    #print stepID
+                    #print stepCommands
+                    matrix_map[wf_id][stepID] = {'description':[], 'commands': stepCommands}
+            #print wf_id
+        print json.dumps(matrix_map, indent=1, sort_keys=True)
+        #
+        #with open('resources/wf.json') as matrixFile:
+        #    matrixMap = json.loads(matrixFile.read())
+        return matrix_map
 
-    def constructJobsMatrix(self, release, arch, days, page_size, workflow_matrix):
-        jobs_ids_and_commands = self.getJobsCommands(workflow_matrix)
-        #jobs_stats = self.getWorkflowStatsFromES(release, arch, days, page_size) # remove this
-        with open('resources/exampleESqueryResult.json') as esQueryFromFile:
-            jobs_stats = json.loads(esQueryFromFile.read())[0]['hits']['hits']
+
+    def constructJobsMatrix(self, release, arch, days, page_size, workflow_matrix_list):
+        jobs_ids_and_commands = self.getJobsCommands(workflow_matrix_list)
+        jobs_stats = self.getWorkflowStatsFromES(release, arch, days, page_size) # remove this
+        #with open('resources/exampleESqueryResult.json') as esQueryFromFile:
+        #    jobs_stats = json.loads(esQueryFromFile.read())[0]['hits']['hits']
 
         ESworkflowsData = jobs_stats
         matrixMap = jobs_ids_and_commands
@@ -145,6 +168,16 @@ if __name__ == "__main__":
     days = 7
     page_size = 0
 
-    jc = JobsConstructor()
-    json_out = jc.constructJobsMatrix(release, arch, days, page_size, None)
-    print json.dumps(json_out, indent=2, sort_keys=True, separators=(',', ': '))
+    wf_list = None
+    with open('resources/wf_slc6_530.txt') as wf_list_file:
+        wf_list = wf_list_file.read().replace('\n', ',')
+        wf_list = wf_list[:-1]
+
+
+    #jc = JobsConstructor()
+    #jc.getJobsCommands()
+
+    print wf_list
+
+    #json_out = jc.constructJobsMatrix(release, arch, days, page_size, None)
+    #print json.dumps(json_out, indent=2, sort_keys=True, separators=(',', ': '))
