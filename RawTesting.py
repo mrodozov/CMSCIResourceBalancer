@@ -56,7 +56,7 @@ if __name__ == "__main__":
 
     avg_mem = 0.95*psutil.virtual_memory()[0]
 
-    wf_limit = 60
+    wf_limit = 20
 
     #print psutil.virtual_memory()[]
     #exit(0)
@@ -69,6 +69,8 @@ if __name__ == "__main__":
 
     jc = JobsConstructor()
     matrixMap =jc.constructJobsMatrix(opts.release, opts.arch, opts.days, opts.page_size, wf_list, wf_limit)
+
+    ''' up to here it constructs the jobs stats'''
 
     jm = JobsManager(matrixMap)
     jm.toProcessQueue = toProcessQueue
@@ -86,7 +88,6 @@ if __name__ == "__main__":
     jp.start()
     jm.getProcessedJobs.start()
 
-
     print 'put jobs on queue tries to join'
     jm.putJobsOnProcessQueue.join()
 
@@ -96,12 +97,11 @@ if __name__ == "__main__":
     print 'finish jobs tries to join'
     jm.getProcessedJobs.join()
 
-
     print jm.results
 
-    jm.writeResultsInFile('jobs_results.json')
+    jm.writeResultsInFile('jobs_results_ideRun.json')
 
-    print wf_list
+    #print wf_list
 
 
 

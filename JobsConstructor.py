@@ -111,7 +111,8 @@ class JobsConstructor(object):
         #                                      shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         #                                      close_fds=True)
         #stdout, stderr = run_matrix_process.communicate()
-        wf_base_folder = '/home/cmsbld/mrodozov/testScheduler/CMSCIResourceBalancer/'
+        #wf_base_folder = '/home/cmsbld/mrodozov/testScheduler/CMSCIResourceBalancer/'
+        wf_base_folder = 'resources/wf_folders/'
         wf_folders = [fld for fld in os.listdir(wf_base_folder) if os.path.isdir(wf_base_folder+fld)]
         #print os.listdir(wf_base_folder)
         matrix_map = {}
@@ -134,21 +135,22 @@ class JobsConstructor(object):
                 break
             #print wf_id
         #print json.dumps(matrix_map, indent=1, sort_keys=True)
-        #
-        #with open('resources/wf.json') as matrixFile:
-        #    matrixMap = json.loads(matrixFile.read())
+
         return matrix_map
 
 
     def constructJobsMatrix(self, release, arch, days, page_size, workflow_matrix_list, wf_limit):
-        jobs_ids_and_commands = self.getJobsCommands(workflow_matrix_list, wf_limit)
-        jobs_stats = self.getWorkflowStatsFromES(release, arch, days, page_size)
+        #matrixMap = self.getJobsCommands(workflow_matrix_list, wf_limit)
+        #jobs_stats = self.getWorkflowStatsFromES(release, arch, days, page_size)
         #for local test get the stats from a file
-        #with open('resources/exampleESqueryResult.json') as esQueryFromFile:
-        #    jobs_stats = json.loads(esQueryFromFile.read())[0]['hits']['hits']
+
+        with open('resources/wf.json') as matrixFile:
+            matrixMap = json.loads(matrixFile.read())
+        with open('resources/exampleESqueryResult.json') as esQueryFromFile:
+            jobs_stats = json.loads(esQueryFromFile.read())[0]['hits']['hits']
 
         ESworkflowsData = jobs_stats
-        matrixMap = jobs_ids_and_commands
+
 
         for i in ESworkflowsData:
             if i['_source']['workflow'] in matrixMap and i['_source']['step'] in matrixMap[i['_source']['workflow']]:

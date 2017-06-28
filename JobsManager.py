@@ -51,7 +51,7 @@ def process_relval_workflow_step(job=None):
     jobMem = job[4]
     jobCommands = job[5]
     prevJobExit = job[6]
-    #jobCommands = 'ls'
+    jobCommands = 'ls'
 
     exit_code = 0
 
@@ -135,6 +135,7 @@ class JobsManager(object):
                 break
 
             #get jobs from the structure put them on queue to process
+            self.counter.acquire()
             next_jobs = self.getNextJobs()
             print 'put jobs on queue getting next jobs:', '\n'#, next_jobs
             self.putNextJobsOnQueue(next_jobs)
@@ -173,10 +174,18 @@ class JobsManager(object):
 
         for job in jobs:
 
-
-
             if job[0] in self.started_jobs or not self.checkIfEnoughMemory(job[4]):
-                print 'skipping job', job[0], job[1]
+                because = None
+
+                if job[0] in self.started_jobs and self.checkIfEnoughMemory(job[4]):
+                    because = ', prev step not finished'
+                if not job[0] in self.started_jobs and not self.checkIfEnoughMemory(job[4]):
+                    because = ', not enough memory'
+                else:
+                    because = ', prev step not finished AND not enough memory'
+
+                print 'skipping job', job[0], job[1], because
+
                 continue
 
             with self.started_jobs_lock:
@@ -187,10 +196,10 @@ class JobsManager(object):
             self._removeJobFromWorkflow(job[0], job[1])
             #print self.jobs
 
-        sleep(0.001)
+        #sleep(0.001)
         print 'clearing'
         #self.finishJobsEvent.set()
-
+    
     '''
     finishing jobs after process
     '''
@@ -206,6 +215,7 @@ class JobsManager(object):
             self.finishJob(finishedJob)
             #print finishedJob['id']
             self.processedQueue.task_done()
+            self.counter.release()
             #self.getNextJobsEvent.set()
 
             print 'finished get finished jobs for ', finishedJob['id'], '\n'
@@ -219,7 +229,6 @@ class JobsManager(object):
 
         self._insertRecordInResults(job)
         #insert the record before removing the job since it might remove the entire job
-
 
         with self.started_jobs_lock:
             #print 'blocks because of the lock'
