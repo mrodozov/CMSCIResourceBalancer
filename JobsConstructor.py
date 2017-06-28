@@ -111,7 +111,7 @@ class JobsConstructor(object):
         #                                      shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         #                                      close_fds=True)
         #stdout, stderr = run_matrix_process.communicate()
-        wf_base_folder = '/build/mrodozov/testScheduler/CMSCIResourceBalancer/'
+        wf_base_folder = '/home/cmsbld/mrodozov/testScheduler/CMSCIResourceBalancer/'
         wf_folders = [fld for fld in os.listdir(wf_base_folder) if os.path.isdir(wf_base_folder+fld)]
         #print os.listdir(wf_base_folder)
         matrix_map = {}
@@ -196,3 +196,4 @@ if __name__ == "__main__":
 
     json_out = jc.constructJobsMatrix(release, arch, days, page_size, wf_list, limit)
     print json.dumps(json_out, indent=2, sort_keys=True, separators=(',', ': '))
+    print len(json_out)

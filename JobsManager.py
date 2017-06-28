@@ -53,7 +53,7 @@ def process_relval_workflow_step(job=None):
     prevJobExit = job[6]
     #jobCommands = 'ls'
 
-    exit_code = 0 #child_process.returncode
+    exit_code = 0
 
     if prevJobExit is not 0:
         return {'id': jobID, 'step': jobStep, 'exit_code': 'notRun', 'mem': int(jobMem), 'stdout': 'notRun',
@@ -62,6 +62,7 @@ def process_relval_workflow_step(job=None):
     child_process = subprocess.Popen(jobCommands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                      close_fds=True)
     stdout, stderr = child_process.communicate()
+    exit_code = child_process.returncode
     #to test the non zero exit code
 
     return {'id': jobID, 'step': jobStep, 'exit_code': exit_code, 'mem': int(jobMem), 'stdout': stdout,

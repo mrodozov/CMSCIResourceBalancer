@@ -56,7 +56,7 @@ if __name__ == "__main__":
 
     avg_mem = 0.95*psutil.virtual_memory()[0]
 
-    wf_limit = 20
+    wf_limit = 60
 
     #print psutil.virtual_memory()[]
     #exit(0)
