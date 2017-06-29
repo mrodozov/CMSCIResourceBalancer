@@ -163,15 +163,19 @@ class JobsConstructor(object):
                 nKeys = len(matrixMap[wf_id][step_id]['description'])
                 countTime = 0
                 countMem = 0
+                cpuUsage = 0
                 for rec in matrixMap[wf_id][step_id]['description']:
                     countTime += int(rec['time'])
                     countMem += int(rec['rss_avg'])
+                    cpuUsage += int(rec['cpu_avg'])
                 if nKeys > 0:
                     matrixMap[wf_id][step_id]['avg_time'] = countTime / nKeys
                     matrixMap[wf_id][step_id]['avg_mem'] = countMem / nKeys
+                    matrixMap[wf_id][step_id]['avg_cpu'] = cpuUsage / nKeys
                 else:
                     matrixMap[wf_id][step_id]['avg_time'] = 21600
                     matrixMap[wf_id][step_id]['avg_mem'] = 4500000000
+                    matrixMap[wf_id][step_id]['avg_cpu'] = 400
 
         return matrixMap
 

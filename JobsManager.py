@@ -27,7 +27,9 @@ def relval_test_process(job=None):
     jobCumulativeTime = job[2]
     jobSelfTime = job[3]
     jobMem = job[4]
-    jobCommands = job[5]
+    jobCPU = job[5]
+    jobCommands = job[6]
+    prevJobExit = job[7]
     jobSelfTime = 0.001
 
     while True:
@@ -49,15 +51,16 @@ def process_relval_workflow_step(job=None):
     jobCumulativeTime = job[2]
     jobSelfTime = job[3]
     jobMem = job[4]
-    jobCommands = job[5]
-    prevJobExit = job[6]
+    jobCPU = job[5]
+    jobCommands = job[6]
+    prevJobExit = job[7]
     jobCommands = 'ls'
 
     exit_code = 0
 
     if prevJobExit is not 0:
-        return {'id': jobID, 'step': jobStep, 'exit_code': 'notRun', 'mem': int(jobMem), 'stdout': 'notRun',
-            'stderr': 'notRun'}
+        return {'id': jobID, 'step': jobStep, 'exit_code': 'notRun', 'mem': int(jobMem), 'cpu': int(jobCPU),
+                'stdout': 'notRun', 'stderr': 'notRun'}
 
     child_process = subprocess.Popen(jobCommands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                      close_fds=True)
@@ -65,8 +68,8 @@ def process_relval_workflow_step(job=None):
     exit_code = child_process.returncode
     #to test the non zero exit code
 
-    return {'id': jobID, 'step': jobStep, 'exit_code': exit_code, 'mem': int(jobMem), 'stdout': stdout,
-            'stderr': stderr}
+    return {'id': jobID, 'step': jobStep, 'exit_code': exit_code, 'mem': int(jobMem), 'cpu': int(jobCPU),
+            'stdout': stdout, 'stderr': stderr}
     #start a subprocess, return it's output
 
 
@@ -101,6 +104,7 @@ class JobsManager(object):
         self.started_jobs = None
         self.results = {}
         self.availableMemory = None
+        self.availableCPU = None
         self.jobs_lock = Lock() # lock when touching jobs structure
         self.started_jobs_lock = Lock()
         self.results_lock = Lock() # lock when touching results structure
@@ -123,6 +127,10 @@ class JobsManager(object):
     def checkIfEnoughMemory(self, mem_value=0):
         return self.availableMemory > mem_value
         #or use a record of the remaining memory
+
+    def checkIfEnoughCPU(self, cpu_value=0):
+        return self.availableCPU > cpu_value
+
     '''
     put jobs for processing methods
     '''
@@ -135,11 +143,10 @@ class JobsManager(object):
                 break
 
             #get jobs from the structure put them on queue to process
-            self.counter.acquire()
+            self.counter.acquire() #acquire resource once, the finishing thread would release it for each finished job
             next_jobs = self.getNextJobs()
-            print 'put jobs on queue getting next jobs:', '\n'#, next_jobs
+            print 'put jobs on queue getting next jobs:', '\n' #, next_jobs
             self.putNextJobsOnQueue(next_jobs)
-            #self.getNextJobsEvent.wait()
 
     def getNextJobs(self, sort_function=None):
         next_jobs = []
@@ -148,6 +155,9 @@ class JobsManager(object):
 
                 if not self.jobs[i].keys():
                     continue
+                '''
+                check if the prev job had finished with exit != 0 and if it did, 
+                '''
 
                 prev_exit = 0
                 with self.results_lock:
@@ -160,7 +170,8 @@ class JobsManager(object):
                 current_step = sorted( self.jobs[i].keys() )[0]
                 cumulative_time = sum([self.jobs[i][j]['avg_time'] for j in self.jobs[i]])
                 element = (i, current_step, cumulative_time, self.jobs[i][current_step]['avg_time'],
-                           self.jobs[i][current_step]['avg_mem'], self.jobs[i][current_step]['commands'], prev_exit)
+                           self.jobs[i][current_step]['avg_mem'], self.jobs[i][current_step]['avg_cpu'],
+                           self.jobs[i][current_step]['commands'], prev_exit)
 
                 next_jobs.append(element)
                 #print i, j, self.jobs[i][j]['avg_time']
@@ -174,32 +185,32 @@ class JobsManager(object):
 
         for job in jobs:
 
-            if job[0] in self.started_jobs or not self.checkIfEnoughMemory(job[4]):
-                because = None
+            if job[0] in self.started_jobs or not self.checkIfEnoughMemory(job[4]) or not self.checkIfEnoughCPU(job[5]):
 
-                if job[0] in self.started_jobs and self.checkIfEnoughMemory(job[4]):
-                    because = ', prev step not finished'
-                if not job[0] in self.started_jobs and not self.checkIfEnoughMemory(job[4]):
-                    because = ', not enough memory'
-                else:
-                    because = ', prev step not finished AND not enough memory'
+                resource_not_available = []
+                if job[0] in self.started_jobs:
+                    resource_not_available.append('prev step not finished')
+                if not self.checkIfEnoughMemory(job[4]):
+                    resource_not_available.append('not enough memory')
+                if not self.checkIfEnoughCPU(job[5]):
+                    resource_not_available.append('not enough cpu')
 
-                print 'skipping job', job[0], job[1], because
+                print 'skipping job', job[0], job[1], 'because ', ','.join(resource_not_available)
 
                 continue
 
             with self.started_jobs_lock:
                 self.started_jobs.append(job[0])
                 self.availableMemory = self.availableMemory - job[4]
+                self.availableCPU = self.availableCPU - job[5]
                 thread_job = workerThread(process_relval_workflow_step, job)
                 self.toProcessQueue.put(thread_job)
             self._removeJobFromWorkflow(job[0], job[1])
             #print self.jobs
 
-        #sleep(0.001)
-        print 'clearing'
-        #self.finishJobsEvent.set()
-    
+        print 'jobs putted on queue'
+
+
     '''
     finishing jobs after process
     '''
@@ -215,8 +226,8 @@ class JobsManager(object):
             self.finishJob(finishedJob)
             #print finishedJob['id']
             self.processedQueue.task_done()
-            self.counter.release()
-            #self.getNextJobsEvent.set()
+            self.counter.release() # release the lock for each finished job, putJobsOnQueue retries to put new jobs
+
 
             print 'finished get finished jobs for ', finishedJob['id'], '\n'
 
@@ -225,18 +236,16 @@ class JobsManager(object):
                 break
 
     def finishJob(self, job=None):
-        print 'finish', job['id'], job['step'], job['exit_code'], job['mem']
+        print 'finish', job['id'], job['step'], job['exit_code'], job['mem'], job['cpu']
 
         self._insertRecordInResults(job)
         #insert the record before removing the job since it might remove the entire job
 
         with self.started_jobs_lock:
-            #print 'blocks because of the lock'
             self.availableMemory += job['mem']
+            self.availableCPU += job['cpu']
             self.started_jobs.remove(job['id'])
             print 'job removed: ', job['id']
-
-        #self._removeJobFromWorkflow(job['id'], job['id'])
 
         #finish the workflow if the step was the last
 
@@ -254,7 +263,6 @@ class JobsManager(object):
             if jobID in self.jobs and stepID in self.jobs[jobID]:
                 if len(self.jobs[jobID]) == 1:
                     self._removeWorkflow(jobID)
-
                 else:
                     del self.jobs[jobID][stepID]
 
@@ -267,16 +275,10 @@ class JobsManager(object):
         with self.results_lock:
             if not result['id'] in self.results:
                 self.results[result['id']] = {}
-            #if result['exit_code'] is not
 
             self.results[result['id']][result['step']] = {'exit_code': result['exit_code'], 'stdout': result['stdout'],
                                                           'stderr':result['stderr']}
-            '''
-            if int(result['exit_code']) is not 0:
-                list_of_steps = [step for step in self.jobs[result['id']]]
-                for step in list_of_steps:
-                    self.results[result['id']][step] = {'exit_code': 'notRun', 'stdout': 'notRun', 'stderr': 'notRun'}
-            '''
+
 
     def writeResultsInFile(self, file=None):
         with self.results_lock:

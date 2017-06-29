@@ -13,6 +13,7 @@ from threading import Event
 import Queue
 from optparse import OptionParser
 import psutil
+from multiprocessing import cpu_count
 
 if __name__ == "__main__":
 
@@ -41,6 +42,8 @@ if __name__ == "__main__":
                 opts.arch = out
     if opts.release != "*": opts.release = opts.release + "*"
 
+    ''' gets the CL arguments '''
+
     opts.release = 'CMSSW_9_2_X*'
     opts.arch = 'slc6_amd64_gcc530'
     opts.days = 7
@@ -55,8 +58,8 @@ if __name__ == "__main__":
     ''' here the program is tested  '''
 
     avg_mem = 0.95*psutil.virtual_memory()[0]
-
-    wf_limit = 20
+    avg_cpu = 100*cpu_count()
+    wf_limit = 60
 
     #print psutil.virtual_memory()[]
     #exit(0)
@@ -76,6 +79,7 @@ if __name__ == "__main__":
     jm.toProcessQueue = toProcessQueue
     jm.processedQueue = processedTasksQueue
     jm.availableMemory = avg_mem
+    jm.availableCPU = avg_cpu
 
     jp = JobsProcessor(toProcessQueue, processedTasksQueue)
     jp.allJobs = jm.jobs
