@@ -54,7 +54,7 @@ def process_relval_workflow_step(job=None):
     jobCPU = job[5]
     jobCommands = job[6]
     prevJobExit = job[7]
-    jobCommands = 'ls'
+    #jobCommands = 'ls'
 
     exit_code = 0
 

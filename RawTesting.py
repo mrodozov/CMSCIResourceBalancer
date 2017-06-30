@@ -58,8 +58,8 @@ if __name__ == "__main__":
     ''' here the program is tested  '''
 
     avg_mem = 0.95*psutil.virtual_memory()[0]
-    avg_cpu = 100*cpu_count()
-    wf_limit = 60
+    avg_cpu = 200*cpu_count()
+    wf_limit = 200
 
     #print psutil.virtual_memory()[]
     #exit(0)
@@ -100,6 +100,7 @@ if __name__ == "__main__":
 
     print 'finish jobs tries to join'
     jm.getProcessedJobs.join()
+    print 'finish jobs joined'
 
     print jm.results
 

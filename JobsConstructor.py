@@ -107,12 +107,12 @@ class JobsConstructor(object):
     def getJobsCommands(self, workflow_matrix_list=None, workflows_limit=None):
         #run runTheMatrix and parse the output for each workflow, example results structure in resources/wf.json
         #for now, get it from the file resources/wf.json
-        #run_matrix_process = subprocess.Popen('runTheMatrix.py -l '+workflow_matrix_list+' -i all --maxSteps=0',
+        #run_matrix_process = subprocess.Popen('voms-proxy-init;runTheMatrix.py -l '+workflow_matrix_list+' -i all --maxSteps=0 -j 20',
         #                                      shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         #                                      close_fds=True)
         #stdout, stderr = run_matrix_process.communicate()
-        #wf_base_folder = '/home/cmsbld/mrodozov/testScheduler/CMSCIResourceBalancer/'
-        wf_base_folder = 'resources/wf_folders/'
+        wf_base_folder = '/home/cmsbld/mrodozov/testScheduler/CMSCIResourceBalancer/'
+        #wf_base_folder = 'resources/wf_folders/'
         wf_folders = [fld for fld in os.listdir(wf_base_folder) if os.path.isdir(wf_base_folder+fld)]
         #print os.listdir(wf_base_folder)
         matrix_map = {}
@@ -140,17 +140,17 @@ class JobsConstructor(object):
 
 
     def constructJobsMatrix(self, release, arch, days, page_size, workflow_matrix_list, wf_limit):
-        #matrixMap = self.getJobsCommands(workflow_matrix_list, wf_limit)
-        #jobs_stats = self.getWorkflowStatsFromES(release, arch, days, page_size)
+        matrixMap = self.getJobsCommands(workflow_matrix_list, wf_limit)
+        jobs_stats = self.getWorkflowStatsFromES(release, arch, days, page_size)
         #for local test get the stats from a file
-
+	'''
         with open('resources/wf.json') as matrixFile:
             matrixMap = json.loads(matrixFile.read())
         with open('resources/exampleESqueryResult.json') as esQueryFromFile:
             jobs_stats = json.loads(esQueryFromFile.read())[0]['hits']['hits']
-
+	'''
         ESworkflowsData = jobs_stats
-
+	
 
         for i in ESworkflowsData:
             if i['_source']['workflow'] in matrixMap and i['_source']['step'] in matrixMap[i['_source']['workflow']]:
