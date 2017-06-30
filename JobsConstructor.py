@@ -111,7 +111,7 @@ class JobsConstructor(object):
         #                                      shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         #                                      close_fds=True)
         #stdout, stderr = run_matrix_process.communicate()
-        wf_base_folder = '/home/cmsbld/mrodozov/testScheduler/CMSCIResourceBalancer/'
+        wf_base_folder = '/build/cmsbld/mrodozov/testScheduler/CMSCIResourceBalancer/'
         #wf_base_folder = 'resources/wf_folders/'
         wf_folders = [fld for fld in os.listdir(wf_base_folder) if os.path.isdir(wf_base_folder+fld)]
         #print os.listdir(wf_base_folder)
