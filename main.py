@@ -59,7 +59,7 @@ if __name__ == "__main__":
 
     avg_mem = 0.95*psutil.virtual_memory()[0]
     avg_cpu = 200*cpu_count()
-    wf_limit = 200
+    wf_limit = 500
 
     #print psutil.virtual_memory()[]
     #exit(0)
