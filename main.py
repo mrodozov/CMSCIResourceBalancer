@@ -51,7 +51,7 @@ if __name__ == "__main__":
 
     wf_list = None
 
-    with open('resources/wf_slc6_530.txt') as wf_list_file:
+    with open('resources/wf_slc6_530_1of5.txt') as wf_list_file:
         wf_list = wf_list_file.read().replace('\n', ',')
         wf_list = wf_list[:-1]
 
