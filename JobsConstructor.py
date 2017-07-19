@@ -104,14 +104,15 @@ class JobsConstructor(object):
 
         return json_out[0]['hits']['hits']
 
-    def getJobsCommands(self, workflow_matrix_list=None, workflows_limit=None):
+    def getJobsCommands(self, workflow_matrix_list=None,workflows_limit=None,workflows_dir=os.environ["CMSSW_BASE"]+"/pyRelval/"):
         #run runTheMatrix and parse the output for each workflow, example results structure in resources/wf.json
         #for now, get it from the file resources/wf.json
         #run_matrix_process = subprocess.Popen('voms-proxy-init;runTheMatrix.py -l '+workflow_matrix_list+' -i all --maxSteps=0 -j 20',
         #                                      shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         #                                      close_fds=True)
         #stdout, stderr = run_matrix_process.communicate()
-        wf_base_folder = '/build/cmsbld/mrodozov/testScheduler/CMSCIResourceBalancer/'
+        #wf_base_folder = '/build/cmsbld/mrodozov/testScheduler/CMSCIResourceBalancer/'
+        wf_base_folder = workflows_dir
         #wf_base_folder = 'resources/wf_folders/'
         wf_folders = [fld for fld in os.listdir(wf_base_folder) if os.path.isdir(wf_base_folder+fld)]
         #print os.listdir(wf_base_folder)
@@ -129,7 +130,7 @@ class JobsConstructor(object):
                     stepID, stepCommands = line.split(':',1)
                     #print stepID
                     #print stepCommands
-                    matrix_map[wf_id][stepID] = {'description':[], 'commands': stepCommands}
+                    matrix_map[wf_id][stepID] = {'description':[], 'commands': 'cd '+ wf_base_folder + ';' + stepCommands}
             counter += 1
             if workflows_limit and counter > workflows_limit:
                 break
@@ -139,8 +140,8 @@ class JobsConstructor(object):
         return matrix_map
 
 
-    def constructJobsMatrix(self, release, arch, days, page_size, workflow_matrix_list, wf_limit):
-        matrixMap = self.getJobsCommands(workflow_matrix_list, wf_limit)
+    def constructJobsMatrix(self, release, arch, days, page_size, workflow_matrix_list, wf_limit,wfs_basedir):
+        matrixMap = self.getJobsCommands(workflow_matrix_list, wf_limit, wfs_basedir)
         jobs_stats = self.getWorkflowStatsFromES(release, arch, days, page_size)
         #for local test get the stats from a file
 	'''
@@ -200,6 +201,6 @@ if __name__ == "__main__":
 
     limit = 20
 
-    json_out = jc.constructJobsMatrix(release, arch, days, page_size, wf_list, limit)
+    json_out = jc.constructJobsMatrix(release, arch, days, page_size, wf_list, limit,os.environ["CMSSW_BASE"]+"/pyRelval/")
     print json.dumps(json_out, indent=2, sort_keys=True, separators=(',', ': '))
     print len(json_out)

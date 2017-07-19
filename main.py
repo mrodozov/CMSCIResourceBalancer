@@ -14,6 +14,7 @@ import Queue
 from optparse import OptionParser
 import psutil
 from multiprocessing import cpu_count
+import os
 
 if __name__ == "__main__":
 
@@ -59,7 +60,7 @@ if __name__ == "__main__":
 
     avg_mem = 0.95*psutil.virtual_memory()[0]
     avg_cpu = 200*cpu_count()
-    wf_limit = 500
+    wf_limit = 1000
 
     #print psutil.virtual_memory()[]
     #exit(0)
@@ -71,7 +72,7 @@ if __name__ == "__main__":
     finishJobsEvent = Event()
 
     jc = JobsConstructor()
-    matrixMap =jc.constructJobsMatrix(opts.release, opts.arch, opts.days, opts.page_size, wf_list, wf_limit)
+    matrixMap =jc.constructJobsMatrix(opts.release, opts.arch, opts.days, opts.page_size, wf_list, wf_limit,os.environ["CMSSW_BASE"]+"/pyRelval/")
 
     ''' up to here it constructs the jobs stats'''
 

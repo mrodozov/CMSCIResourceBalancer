@@ -72,6 +72,17 @@ def process_relval_workflow_step(job=None):
             'stdout': stdout, 'stderr': stderr}
     #start a subprocess, return it's output
 
+def getWorkflowDuration(workflowFolder=None):
+
+    total_time = 0
+    for i in os.listdir(workflowFolder):
+        if i.find('wf_stats') is not -1:
+            with open(os.path.join(workflowFolder, i), 'r') as wf_stats_file:
+                wf_stats_obj = json.loads(wf_stats_file.read())
+                total_time += wf_stats_obj[-1]['time']
+
+    print total_time
+    return total_time
 
 
 def finilazeWorkflow(workflowID=None):
