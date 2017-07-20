@@ -160,6 +160,7 @@ class JobsManager(object):
 
     def __init__(self, jobs=None):
         self.jobs = jobs
+        self.jobs_result_folders = {}
         self.started_jobs = None
         self.results = {}
         self.availableMemory = None
@@ -227,6 +228,8 @@ class JobsManager(object):
                                 break
 
                 current_step = sorted( self.jobs[i].keys() )[0]
+                if not i in self.jobs_result_folders:
+                    self.jobs_result_folders[i] = self.jobs[i][current_step]['results_folder']
                 cumulative_time = sum([self.jobs[i][j]['avg_time'] for j in self.jobs[i]])
                 element = (i, current_step, cumulative_time, self.jobs[i][current_step]['avg_time'],
                            self.jobs[i][current_step]['avg_mem'], self.jobs[i][current_step]['avg_cpu'],
@@ -314,7 +317,7 @@ class JobsManager(object):
                     self.results[job['id']]['finishing_exit'] = 'finished'
 
                     job_results = self.results[job['id']]
-                    current_job_folder = self.jobs[job['id']]['results_folder']
+                    current_job_folder = self.jobs_result_folders[job['id']]
                     getWorkflowDuration(current_job_folder)
                     writeWorkflowLog(current_job_folder, job_results)
                     finilazeWorkflow(current_job_folder, job['id'])
