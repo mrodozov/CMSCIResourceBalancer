@@ -10,6 +10,7 @@ from operator import itemgetter
 import psutil
 import json
 import subprocess
+import os
 
 '''
 method putNextJobsOnQueue may need to use another lock
@@ -82,10 +83,57 @@ def getWorkflowDuration(workflowFolder=None):
                 total_time += wf_stats_obj[-1]['time']
 
     print total_time
+    with open(os.path.join(workflowFolder, 'time.log'), 'w') as timelog_file:
+        timelog_file.write(str(total_time))
+
     return total_time
 
 
-def finilazeWorkflow(workflowID=None):
+
+def writeWorkflowLog(workflowFolder=None, workflowLogsJson=None):
+
+    result_keys = sorted(workflowLogsJson, reverse=False)
+    result_keys.remove('finishing_exit')
+    workflow_subfolder = workflowFolder.split('/')[-1]
+    steps_strings = []
+    time_string = ''
+    exit_codes = []
+    passed = []
+    failed = []
+    #print workflow_subfolder
+    for i in result_keys:
+
+        #print i, workflowLogsJson[i]
+        if workflowLogsJson[i]['exit_code'] is 0:
+            steps_strings.append(i+'-PASSED')
+            passed.append('1')
+            failed.append('0')
+            exit_codes.append('0')
+        elif workflowLogsJson[i]['exit_code'] is 'notRun':
+            steps_strings.append(i+'-NOTRUN')
+            passed.append('0')
+            failed.append('0')
+            exit_codes.append('0')
+        else:
+            steps_strings.append(i+'-FAILED')
+            passed.append('0')
+            failed.append('1')
+            exit_codes.append(str(workflowLogsJson[i]['exit_code']))
+
+    output_log = workflow_subfolder+' '+\
+        ' '.join(steps_strings)+' '+\
+        ' - time;'+' '+\
+        'exit:'+' '+\
+        ' '.join(exit_codes)+' '+\
+        '\n'+' '+\
+        ' '.join(passed) + ' test passed,'+' '+\
+        ' '.join(failed) +' tests failed'
+    print output_log
+
+    with open(os.path.join(workflowFolder, 'workflow_test.log'), 'w') as wflog_output:
+        wflog_output.write(output_log)
+
+def finilazeWorkflow(workflowFolder=None,workflowID=None):
 
     pass
 
@@ -221,7 +269,6 @@ class JobsManager(object):
 
         print 'jobs putted on queue'
 
-
     '''
     finishing jobs after process
     '''
@@ -264,8 +311,15 @@ class JobsManager(object):
             if not job['id'] in self.jobs:
                 print 'finalize wf:', job['id']
                 with self.results_lock:
-                    finilazeWorkflow(job['id'])
                     self.results[job['id']]['finishing_exit'] = 'finished'
+
+                    job_results = self.results[job['id']]
+                    current_job_folder = self.jobs[job['id']]['results_folder']
+                    getWorkflowDuration(current_job_folder)
+                    writeWorkflowLog(current_job_folder, job_results)
+                    finilazeWorkflow(current_job_folder, job['id'])
+
+
     '''
     '''
     
@@ -296,13 +350,39 @@ class JobsManager(object):
             with open(file, 'w') as results_file:
                 results_file.write(json.dumps(self.results, indent=1, sort_keys=True))
 
-
-
 ''' 
 the task list 
 '''
 
 if __name__ == "__main__":
+
+    jobs_result = {
+        "finishing_exit": "finished",
+        "step1": {
+        "exit_code": 0,
+        "stderr": None,
+       "stdout": ""
+      },
+      "step2": {
+       "exit_code": 0,
+       "stderr": None,
+       "stdout": ""
+      },
+      "step3": {
+       "exit_code": 0,
+       "stderr": None,
+       "stdout": ""
+      }
+    }
+
+    keys_list = sorted(jobs_result, reverse=False)
+
+    #given_wf_folder = 'resources/finished_wf_folders/matrix/2.0_ProdTTbar+ProdTTbar+DIGIPROD1+RECOPROD1'
+    given_wf_folder = 'resources/finished_wf_folders/matrix/1.0_ProdMinBias+ProdMinBias+DIGIPROD1+RECOPROD1'
+
+    writeWorkflowLog(given_wf_folder, jobs_result)
+
+    getWorkflowDuration(given_wf_folder)
 
 
     pass

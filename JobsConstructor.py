@@ -104,7 +104,7 @@ class JobsConstructor(object):
 
         return json_out[0]['hits']['hits']
 
-    def getJobsCommands(self, workflow_matrix_list=None,workflows_limit=None,workflows_dir=os.environ["CMSSW_BASE"]+"/pyRelval/"):
+    def getJobsCommands(self, workflow_matrix_list=None,workflows_limit=None, workflows_dir=os.environ["CMSSW_BASE"]+"/pyRelval/"):
         #run runTheMatrix and parse the output for each workflow, example results structure in resources/wf.json
         #for now, get it from the file resources/wf.json
         #run_matrix_process = subprocess.Popen('voms-proxy-init;runTheMatrix.py -l '+workflow_matrix_list+' -i all --maxSteps=0 -j 20',
@@ -127,10 +127,14 @@ class JobsConstructor(object):
             matrix_map[wf_id] = {}
             with open(os.path.join(wf_base_folder, f, 'wf_steps.txt')) as wf_file:
                 for line in wf_file.readlines():
-                    stepID, stepCommands = line.split(':',1)
+                    stepID, stepCommands = line.split(':', 1)
                     #print stepID
                     #print stepCommands
-                    matrix_map[wf_id][stepID] = {'description':[], 'commands': 'cd '+ wf_base_folder + ';' + stepCommands}
+                    # print the commands after each step in cmdLog
+                    matrix_map[wf_id][stepID] = {'description':[], 'commands': 'cd '+ wf_base_folder + ';' + stepCommands,
+                                                 'results_folder': os.path.join(wf_base_folder, f)}
+
+
             counter += 1
             if workflows_limit and counter > workflows_limit:
                 break
@@ -151,7 +155,7 @@ class JobsConstructor(object):
             jobs_stats = json.loads(esQueryFromFile.read())[0]['hits']['hits']
 	'''
         ESworkflowsData = jobs_stats
-	
+
 
         for i in ESworkflowsData:
             if i['_source']['workflow'] in matrixMap and i['_source']['step'] in matrixMap[i['_source']['workflow']]:
@@ -196,7 +200,7 @@ if __name__ == "__main__":
 
     jc = JobsConstructor(wf_list)
     jc.getJobsCommands(wf_list)
-    
+
     #print wf_list
 
     limit = 20
