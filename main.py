@@ -44,22 +44,27 @@ if __name__ == "__main__":
     if opts.release != "*": opts.release = opts.release + "*"
 
     ''' gets the CL arguments '''
+    
+    #print opts.release, opts.arch, opts.days
+    
+    #exit(0)
 
-    opts.release = 'CMSSW_9_3_X*'
-    opts.arch = 'slc6_amd64_gcc630'
-    opts.days = 7
+    #opts.release = 'CMSSW_9_3_X*'
+    #opts.arch = 'slc6_amd64_gcc630'
+    #opts.days = 7
     opts.page_size = 0
-
+    
+    
     wf_list = None
 
-    with open('resources/wf_slc6_530_1of5.txt') as wf_list_file:
-        wf_list = wf_list_file.read().replace('\n', ',')
-        wf_list = wf_list[:-1]
+    #with open('resources/wf_slc6_530_1of5.txt') as wf_list_file:
+    #    wf_list = wf_list_file.read().replace('\n', ',')
+    #    wf_list = wf_list[:-1]
 
     ''' here the program is tested  '''
 
     avg_mem = 0.95*psutil.virtual_memory()[0]
-    avg_cpu = 200*cpu_count()
+    avg_cpu = 100*cpu_count()
     wf_limit = 1000
 
     #print psutil.virtual_memory()[]
