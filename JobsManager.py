@@ -130,7 +130,7 @@ def writeWorkflowLog(workflowFolder=None, workflowLogsJson=None):
         ' '.join(failed) +' tests failed'
     print output_log
 
-    with open(os.path.join(workflowFolder, 'workflow_test.log'), 'w') as wflog_output:
+    with open(os.path.join(workflowFolder, 'workflow.log'), 'w') as wflog_output:
         wflog_output.write(output_log)
 
 def finilazeWorkflow(workflowFolder=None,workflowID=None):
