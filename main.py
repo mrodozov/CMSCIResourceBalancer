@@ -38,15 +38,15 @@ if __name__ == "__main__":
                 "grep 'RELEASE_QUEUE=%s;' %s/config.map | grep -v 'DISABLED=1;' | grep 'PROD_ARCH=1;' | tr ';' '\n' | grep 'SCRAM_ARCH=' | sed 's|.*=||'" % (
                 opts.release, script_path))
             if err:
-                opts.arch = "slc6_amd64_gcc530"
+                opts.arch = "slc6_amd64_gcc630"
             else:
                 opts.arch = out
     if opts.release != "*": opts.release = opts.release + "*"
 
     ''' gets the CL arguments '''
 
-    opts.release = 'CMSSW_9_2_X*'
-    opts.arch = 'slc6_amd64_gcc530'
+    opts.release = 'CMSSW_9_3_X*'
+    opts.arch = 'slc6_amd64_gcc630'
     opts.days = 7
     opts.page_size = 0
 
