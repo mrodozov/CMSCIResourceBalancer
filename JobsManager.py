@@ -136,7 +136,7 @@ def writeWorkflowLog(workflowFolder=None, workflowLogsJson=None):
     with open(os.path.join(workflowFolder, 'hostname'), 'w') as hostname_output:
         hostname_output.write(os.uname()[1])
 
-def finilazeWorkflow(workflowFolder=None,workflowID=None):
+def finilazeWorkflow(workflowFolder=None, workflowID=None):
 
     pass
 
