@@ -29,8 +29,8 @@ date > ../results/${1}/scheduler/start_time
 python prepareSteps.py -l $wfs
 python main.py -a $SCRAM_ARCH -r ${CMSSW_VERSION:0:11} -d 7
 
-#mv ../${CMSSW_VERSION}/pyRelval/* ../results/${1}/scheduler/
-#mv jobs_results_ideRun.json ../results/${1}/scheduler/
+mv ../${CMSSW_VERSION}/pyRelval/* ../results/${1}/scheduler/
+mv jobs_results_ideRun.json ../results/${1}/scheduler/
 
-#date > ../results/${1}/scheduler/end_time
+date > ../results/${1}/scheduler/end_time
 
