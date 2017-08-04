@@ -13,14 +13,16 @@ from es_utils import get_payload
 from time import time
 import subprocess
 import os
+from cmssw_known_errors import get_known_errors
 
 class JobsConstructor(object):
 
     __metaclass__ = Singleton
 
-    def __init__(self, workflows_list=None):
+    def __init__(self, workflows_list=None, cmssw_known_errors={}):
 
         self._workflows = workflows_list
+        self._known_errors = cmssw_known_errors
 
     def _format(self, s, **kwds):
         return s % kwds
@@ -133,7 +135,9 @@ class JobsConstructor(object):
                     # print the commands after each step in cmdLog
                     matrix_map[wf_id][stepID] = {'description':[], 'commands': 'cd '+ wf_base_folder + ';' + stepCommands,
                                                  'results_folder': os.path.join(wf_base_folder, f)}
-
+            if wf_id in self._known_errors:
+                with open(os.path.join(matrix_map[wf_id][stepID]['results_folder'],'known_errors.json'),'w') as known_errs_file:
+                    known_errs_file.write(json.dumps(self._known_errors[wf_id]))
 
             counter += 1
             if workflows_limit and counter > workflows_limit:
@@ -187,8 +191,8 @@ class JobsConstructor(object):
 if __name__ == "__main__":
 
     opts = None
-    release = 'CMSSW_9_2_X*'
-    arch = 'slc6_amd64_gcc530'
+    release = 'CMSSW_9_3_X*'
+    arch = 'slc6_amd64_gcc630'
     days = 7
     page_size = 0
 
@@ -197,6 +201,8 @@ if __name__ == "__main__":
         wf_list = wf_list_file.read().replace('\n', ',')
         wf_list = wf_list[:-1]
 
+    
+    known_errors = get_known_errors(release, arch, 'relvals')
 
     jc = JobsConstructor(wf_list)
     jc.getJobsCommands(wf_list)
