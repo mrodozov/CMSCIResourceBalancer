@@ -15,7 +15,7 @@ from optparse import OptionParser
 import psutil
 from multiprocessing import cpu_count
 import os
-from cmssw_know_errors import get_known_errors
+from cmssw_known_errors import get_known_errors
 
 if __name__ == "__main__":
 
@@ -65,7 +65,7 @@ if __name__ == "__main__":
     ''' here the program is tested  '''
     
     avg_mem = 0.90*psutil.virtual_memory()[0]
-    avg_cpu = 150*cpu_count()
+    avg_cpu = 200*cpu_count()
     wf_limit = 1000
     
     #print psutil.virtual_memory()[]
@@ -78,12 +78,13 @@ if __name__ == "__main__":
     finishJobsEvent = Event()
     
     known_errors = get_known_errors(opts.release, opts.arch, 'relvals')
-
+    #print known_errors
+    
     jc = JobsConstructor(None, known_errors)    
     matrixMap =jc.constructJobsMatrix(opts.release, opts.arch, opts.days, opts.page_size, wf_list, wf_limit,os.environ["CMSSW_BASE"]+"/pyRelval/")
 
     ''' up to here it constructs the jobs stats'''
-
+    
     jm = JobsManager(matrixMap)
     jm.toProcessQueue = toProcessQueue
     jm.processedQueue = processedTasksQueue
@@ -116,6 +117,6 @@ if __name__ == "__main__":
     jm.writeResultsInFile('jobs_results_ideRun.json')
 
     #print wf_list
-
+    
 
 
