@@ -9,11 +9,17 @@ for this the class has to
 
 import json
 from Singleton import Singleton
-from es_utils import get_payload
 from time import time
 import subprocess
 import os
-from cmssw_known_errors import get_known_errors
+import sys
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(sys.argv[0]))
+CMS_BOT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR,'..'))
+sys.path.insert(0,CMS_BOT_DIR)
+sys.path.insert(0,SCRIPT_DIR)
+
+from es_utils import get_payload
 
 class JobsConstructor(object):
 

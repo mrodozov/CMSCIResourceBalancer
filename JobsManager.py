@@ -11,6 +11,14 @@ import psutil
 import json
 import subprocess
 import os
+import sys
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(sys.argv[0]))
+CMS_BOT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR,'..'))
+sys.path.insert(0, CMS_BOT_DIR)
+sys.path.insert(0, os.path.join(CMS_BOT_DIR, 'jobs'))
+
+from workflow_final import upload_logs
 
 '''
 method putNextJobsOnQueue may need to use another lock
