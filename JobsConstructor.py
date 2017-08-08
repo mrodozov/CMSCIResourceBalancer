@@ -136,7 +136,7 @@ class JobsConstructor(object):
                     matrix_map[wf_id][stepID] = {'description':[], 'commands': 'cd '+ wf_base_folder + ';' + stepCommands,
                                                  'results_folder': os.path.join(wf_base_folder, f)}
             if wf_id in self._known_errors:
-                with open(os.path.join(matrix_map[wf_id][stepID]['results_folder'],'known_errors.json'),'w') as known_errs_file:
+                with open(os.path.join(wf_base_folder, f, 'known_errors.json'),'w') as known_errs_file:
                     known_errs_file.write(json.dumps(self._known_errors[wf_id]))
 
             counter += 1
@@ -160,7 +160,6 @@ class JobsConstructor(object):
 	'''
         ESworkflowsData = jobs_stats
 
-
         for i in ESworkflowsData:
             if i['_source']['workflow'] in matrixMap and i['_source']['step'] in matrixMap[i['_source']['workflow']]:
                 matrixMap[i['_source']['workflow']][i['_source']['step']]['description'].append(i['_source'])
@@ -175,7 +174,7 @@ class JobsConstructor(object):
                 cpuUsage = 0
                 for rec in matrixMap[wf_id][step_id]['description']:
                     countTime += int(rec['time'])
-                    countMem += int(rec['rss_avg'])
+                    countMem += int(rec['rss_75'])
                     cpuUsage += int(rec['cpu_avg'])
                 if nKeys > 0:
                     matrixMap[wf_id][step_id]['avg_time'] = countTime / nKeys

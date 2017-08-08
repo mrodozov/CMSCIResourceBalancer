@@ -69,7 +69,7 @@ def process_relval_workflow_step(job=None):
     stderr = ''
     #child_process.communicate()
     #exit_code = child_process.returncode
-    exit_code = os.waitpid(child_process.pid, 0)[0]
+    exit_code = os.waitpid(child_process.pid, 0)[1]
     #to test the non zero exit code
 
     return {'id': jobID, 'step': jobStep, 'exit_code': exit_code, 'mem': int(jobMem), 'cpu': int(jobCPU),
@@ -90,8 +90,6 @@ def getWorkflowDuration(workflowFolder=None):
         timelog_file.write(str(total_time))
 
     return total_time
-
-
 
 def writeWorkflowLog(workflowFolder=None, workflowLogsJson=None):
 
