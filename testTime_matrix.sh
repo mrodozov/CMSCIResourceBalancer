@@ -30,7 +30,7 @@ date > ../results/${1}/matrix/start_time
 #python main.py -a $SCRAM_ARCH -r ${CMSSW_VERSION:0:11} -d 7
 python run-ib-relval.py -l $wfs
 
-mv ../${CMSSW_VERSION}/pyRelval/* ../results/${1}/matrix/
+mv ${CMSSW_BASE}/pyRelval/* ../results/${1}/matrix/
 mv jobs_results_ideRun.json ../results/${1}/matrix/
 
 date > ../results/${1}/matrix/end_time
