@@ -63,10 +63,13 @@ def process_relval_workflow_step(job=None):
         return {'id': jobID, 'step': jobStep, 'exit_code': 'notRun', 'mem': int(jobMem), 'cpu': int(jobCPU),
                 'stdout': 'notRun', 'stderr': 'notRun'}
 
-    child_process = subprocess.Popen(jobCommands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                     close_fds=True)
-    stdout, stderr = child_process.communicate()
-    exit_code = child_process.returncode
+    child_process = subprocess.Popen(jobCommands, shell=True)
+    #, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+    stdout =''
+    stderr = ''
+    #child_process.communicate()
+    #exit_code = child_process.returncode
+    exit_code = os.waitpid(child_process.pid, 0)[0]
     #to test the non zero exit code
 
     return {'id': jobID, 'step': jobStep, 'exit_code': exit_code, 'mem': int(jobMem), 'cpu': int(jobCPU),
@@ -162,6 +165,7 @@ class JobsManager(object):
     __metaclass__ = Singleton
 
     def __init__(self, jobs=None):
+
         self.jobs = jobs
         self.jobs_result_folders = {}
         self.started_jobs = None
@@ -171,10 +175,14 @@ class JobsManager(object):
         self.jobs_lock = Lock() # lock when touching jobs structure
         self.started_jobs_lock = Lock()
         self.results_lock = Lock() # lock when touching results structure
+        self.error_codes_map = None
+        self.translate_exit_codes = False # set this flag to true to translate codes
+
         ''' 
         add the thread jobs that put jobs on execution queue
         and finilizes them here
         '''
+
         self.started_jobs = [] # jobs already started
         self.putJobsOnProcessQueue = Thread(target=self.putJobsOnQueue)
         self.getProcessedJobs = Thread(target=self.getFinishedJobs)
