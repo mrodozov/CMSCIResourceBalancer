@@ -1,7 +1,3 @@
-'''
-This file is for raw test anything
-'''
-
 from os.path import dirname, abspath
 from sys import argv
 from commands import getstatusoutput
