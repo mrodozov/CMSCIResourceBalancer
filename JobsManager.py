@@ -18,7 +18,7 @@ CMS_BOT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR,'..'))
 sys.path.insert(0, CMS_BOT_DIR)
 sys.path.insert(0, os.path.join(CMS_BOT_DIR, 'jobs'))
 
-from workflow_final import upload_logs
+#from workflow_final import upload_logs
 
 '''
 method putNextJobsOnQueue may need to use another lock
@@ -49,7 +49,9 @@ def relval_test_process(job=None):
             print 'breaking'
             break
 
-    return {'id': jobID, 'step': jobStep, 'exit_code': 0, 'mem': int(jobMem)}
+    #return {'id': jobID, 'step': jobStep, 'exit_code': 0, 'mem': int(jobMem)}
+    return {'id': jobID, 'step': jobStep, 'exit_code': 'notRun', 'mem': int(jobMem), 'cpu': int(jobCPU),
+                'stdout': 'notRun', 'stderr': 'notRun'}
 
 
 def process_relval_workflow_step(job=None):
@@ -245,7 +247,7 @@ class JobsManager(object):
                                 break
 
                 current_step = sorted( self.jobs[i].keys() )[0]
-                if not i in self.jobs_result_folders:
+                if i not in self.jobs_result_folders:
                     self.jobs_result_folders[i] = self.jobs[i][current_step]['results_folder']
                 cumulative_time = sum([self.jobs[i][j]['avg_time'] for j in self.jobs[i]])
                 element = (i, current_step, cumulative_time, self.jobs[i][current_step]['avg_time'],
@@ -282,7 +284,8 @@ class JobsManager(object):
                 self.started_jobs.append(job[0])
                 self.availableMemory = self.availableMemory - job[4]
                 self.availableCPU = self.availableCPU - job[5]
-                thread_job = workerThread(process_relval_workflow_step, job)
+                #thread_job = workerThread(process_relval_workflow_step, job)
+                thread_job = workerThread(relval_test_process, job)
                 self.toProcessQueue.put(thread_job)
             self._removeJobFromWorkflow(job[0], job[1])
             #print self.jobs
@@ -363,7 +366,6 @@ class JobsManager(object):
 
             self.results[result['id']][result['step']] = {'exit_code': result['exit_code'], 'stdout': result['stdout'],
                                                           'stderr':result['stderr']}
-
 
     def writeResultsInFile(self, file=None):
         with self.results_lock:

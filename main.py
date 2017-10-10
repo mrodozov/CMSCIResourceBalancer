@@ -15,13 +15,14 @@ import psutil
 from multiprocessing import cpu_count
 import os
 import sys
+import json
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(sys.argv[0]))
 CMS_BOT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR,'..'))
 sys.path.insert(0, CMS_BOT_DIR)
 sys.path.insert(0, os.path.join(CMS_BOT_DIR, 'jobs'))
 
-from cmssw_known_errors import get_known_errors
+#from cmssw_known_errors import get_known_errors
 
 if __name__ == "__main__":
 
@@ -83,14 +84,21 @@ if __name__ == "__main__":
     getNextJobsEvent = Event()
     finishJobsEvent = Event()
     
-    known_errors = get_known_errors(opts.release, opts.arch, 'relvals')
+    #known_errors = get_known_errors(opts.release, opts.arch, 'relvals')
     #print known_errors
     
-    jc = JobsConstructor(None, known_errors)    
-    matrixMap =jc.constructJobsMatrix(opts.release, opts.arch, opts.days, opts.page_size, wf_list, wf_limit,os.environ["CMSSW_BASE"]+"/pyRelval/")
+    jc = JobsConstructor(None)
+    matrixMap =jc.constructJobsMatrix(opts.release, opts.arch, opts.days, opts.page_size, wf_list, wf_limit,
+                                      'resources/1of5folder/1of5/testJobs/')
+                                      #os.environ["CMSSW_BASE"]+"/pyRelval/")
+
+    #print json.dumps( matrixMap,indent=1)
+
 
     ''' up to here it constructs the jobs stats'''
-    
+
+
+        
     jm = JobsManager(matrixMap)
     jm.toProcessQueue = toProcessQueue
     jm.processedQueue = processedTasksQueue
@@ -121,6 +129,8 @@ if __name__ == "__main__":
     print jm.results
 
     jm.writeResultsInFile('jobs_results_ideRun.json')
+    
+
 
     #print wf_list
     
