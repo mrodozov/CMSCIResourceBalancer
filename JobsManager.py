@@ -41,6 +41,8 @@ def relval_test_process(job=None):
     prevJobExit = job[7]
     jobSelfTime = 0.001
 
+
+
     while True:
         #print 'eta: ', jobID, jobStep, jobSelfTime
         sleep(jobSelfTime)
@@ -69,6 +71,8 @@ def process_relval_workflow_step(job=None):
 
     exit_code = 0
 
+    start_time = 0
+
     if prevJobExit is not 0:
         return {'id': jobID, 'step': jobStep, 'exit_code': 'notRun', 'mem': int(jobMem), 'cpu': int(jobCPU),
                 'stdout': 'notRun', 'stderr': 'notRun'}
@@ -81,6 +85,8 @@ def process_relval_workflow_step(job=None):
     #exit_code = child_process.returncode
     exit_code = os.waitpid(child_process.pid, 0)[1]
     #to test the non zero exit code
+
+    stop_time = 0
 
     return {'id': jobID, 'step': jobStep, 'exit_code': exit_code, 'mem': int(jobMem), 'cpu': int(jobCPU),
             'stdout': stdout, 'stderr': stderr}
@@ -199,6 +205,15 @@ class JobsManager(object):
         self.getNextJobsEvent = None
         self.counter = Semaphore()
 
+        '''
+        API calls provided externally as functions that would be called with specific arguments
+        '''
+
+        self.workflowIsStarting = None
+        self.workflowIsFinishing = None
+        self.stepIsStarting = None
+        self.stepIsFinishing = None
+
     '''
     methods to check resources availability
     '''
@@ -287,6 +302,7 @@ class JobsManager(object):
                 #thread_job = workerThread(process_relval_workflow_step, job)
                 thread_job = workerThread(relval_test_process, job)
                 self.toProcessQueue.put(thread_job)
+
             self._removeJobFromWorkflow(job[0], job[1])
             #print self.jobs
 
@@ -303,12 +319,11 @@ class JobsManager(object):
             print 'get finished jobs', '\n'
             #print 'jobs from finished jobs', '\n', self.jobs
 
-            finishedJob = self.processedQueue.get()
+            finishedJob = self.processedQueue.get() #gets the return value from the executed function
             self.finishJob(finishedJob)
             #print finishedJob['id']
             self.processedQueue.task_done()
             self.counter.release() # release the lock for each finished job, putJobsOnQueue retries to put new jobs
-
 
             print 'finished get finished jobs for ', finishedJob['id'], '\n'
 
@@ -339,7 +354,7 @@ class JobsManager(object):
                     job_results = self.results[job['id']]
                     current_job_folder = self.jobs_result_folders[job['id']]
                     getWorkflowDuration(current_job_folder)
-                    writeWorkflowLog(current_job_folder, job_results)
+                    writeWorkflowLog(current_job_folder, job_results) #this method might write job results file 1 by 1
                     finilazeWorkflow(current_job_folder, job['id'])
 
 
@@ -371,6 +386,23 @@ class JobsManager(object):
         with self.results_lock:
             with open(file, 'w') as results_file:
                 results_file.write(json.dumps(self.results, indent=1, sort_keys=True))
+    '''
+    callback methods to be called 
+    '''
+
+    def _workflowIsStarting(self, *args):
+        print args
+
+    def _workflowIsFinishing(self, *args):
+        print args
+
+    def _stepIsStarting(self, *args):
+        print args
+
+    def _stepIsFinishing(self, * args):
+        print args
+
+
 
 ''' 
 the task list 
