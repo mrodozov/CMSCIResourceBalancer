@@ -52,7 +52,7 @@ def relval_test_process(job=None):
             break
 
     #return {'id': jobID, 'step': jobStep, 'exit_code': 0, 'mem': int(jobMem)}
-    return {'id': jobID, 'step': jobStep, 'exit_code': 'notRun', 'mem': int(jobMem), 'cpu': int(jobCPU),
+    return {'id': jobID, 'step': jobStep, 'exit_code': '0', 'mem': int(jobMem), 'cpu': int(jobCPU),
                 'stdout': 'notRun', 'stderr': 'notRun'}
 
 
@@ -153,9 +153,12 @@ def writeWorkflowLog(workflowFolder=None, workflowLogsJson=None):
     with open(os.path.join(workflowFolder, 'hostname'), 'w') as hostname_output:
         hostname_output.write(os.uname()[1])
 
-def finilazeWorkflow(workflowFolder=None, workflowID=None):
+def finilazeWorkflow(workflowID=None, workflowStep=None, wf_base_folder=None, job_results=None):
 
-    pass
+    #getWorkflowDuration(wf_base_folder)
+    #writeWorkflowLog(wf_base_folder, job_results)
+    #finilazeWorkflow(wf_base_folder, workflowID)
+    print 'finishing from callback'
 
 
 class workerThread(Thread):
@@ -210,7 +213,7 @@ class JobsManager(object):
         '''
 
         self.workflowIsStarting = None
-        self.workflowIsFinishing = None
+        self.workflowIsFinishing = finilazeWorkflow
         self.stepIsStarting = None
         self.stepIsFinishing = None
 
@@ -301,6 +304,14 @@ class JobsManager(object):
                 self.availableCPU = self.availableCPU - job[5]
                 #thread_job = workerThread(process_relval_workflow_step, job)
                 thread_job = workerThread(relval_test_process, job)
+                '''
+                callbacks calls
+                '''
+                if job[0] not in self.results:
+                    # its the first step of the wf, execute one time pre wf callback
+                    self._workflowIsStarting(job[0], job[1], self.jobs_result_folders[job[0]])
+                # and once per step
+                self._stepIsStarting(job[0], job[1], self.jobs_result_folders[job[0]])
                 self.toProcessQueue.put(thread_job)
 
             self._removeJobFromWorkflow(job[0], job[1])
@@ -318,8 +329,7 @@ class JobsManager(object):
 
             print 'get finished jobs', '\n'
             #print 'jobs from finished jobs', '\n', self.jobs
-
-            finishedJob = self.processedQueue.get() #gets the return value from the executed function
+            finishedJob = self.processedQueue.get() #gets the return value from the executed function, i.e. wf step resu
             self.finishJob(finishedJob)
             #print finishedJob['id']
             self.processedQueue.task_done()
@@ -333,7 +343,8 @@ class JobsManager(object):
 
     def finishJob(self, job=None):
         print 'finish', job['id'], job['step'], job['exit_code'], job['mem'], job['cpu']
-
+        #callback call when step is finished
+        self._stepIsFinishing(job['id'], job['step'], self.jobs_result_folders[job['id']])
         self._insertRecordInResults(job)
         #insert the record before removing the job since it might remove the entire job
 
@@ -350,12 +361,14 @@ class JobsManager(object):
                 print 'finalize wf:', job['id']
                 with self.results_lock:
                     self.results[job['id']]['finishing_exit'] = 'finished'
-
                     job_results = self.results[job['id']]
                     current_job_folder = self.jobs_result_folders[job['id']]
-                    getWorkflowDuration(current_job_folder)
-                    writeWorkflowLog(current_job_folder, job_results) #this method might write job results file 1 by 1
-                    finilazeWorkflow(current_job_folder, job['id'])
+                    #callback call when the entire workflow is finished
+                    self._workflowIsFinishing(job['id'], job['step'], current_job_folder, job_results)
+
+                    #getWorkflowDuration(current_job_folder)
+                    #writeWorkflowLog(current_job_folder, job_results) #this method might write job results file 1 by 1
+                    #finilazeWorkflow(current_job_folder, job['id'])
 
 
     '''
@@ -391,16 +404,26 @@ class JobsManager(object):
     '''
 
     def _workflowIsStarting(self, *args):
-        print args
+        print 'wf is starting'
+        for i in args:
+            print i
+        if self.workflowIsStarting:
+            self.workflowIsStarting(*args)
 
     def _workflowIsFinishing(self, *args):
         print args
+        if self.workflowIsFinishing:
+            self.workflowIsFinishing(*args)
 
     def _stepIsStarting(self, *args):
         print args
+        if self.stepIsStarting:
+            self.stepIsStarting(*args)
 
     def _stepIsFinishing(self, * args):
         print args
+        if self.stepIsFinishing:
+            self.stepIsFinishing(*args)
 
 
 
