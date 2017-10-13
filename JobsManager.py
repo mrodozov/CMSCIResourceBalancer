@@ -2,23 +2,25 @@ __author__ = 'mrodozov@cern.ch'
 '''
 This class instance(singleton) manages jobs ordering
 '''
-
-from Singleton import Singleton
-from threading import Lock, Thread, Semaphore
-from time import sleep
-from operator import itemgetter
 import psutil
 import json
 import subprocess
 import os
 import sys
+import time
+
+from Singleton import Singleton
+from threading import Lock, Thread, Semaphore
+from time import sleep
+from operator import itemgetter
+
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(sys.argv[0]))
-CMS_BOT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR,'..'))
+CMS_BOT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, '..'))
 sys.path.insert(0, CMS_BOT_DIR)
 sys.path.insert(0, os.path.join(CMS_BOT_DIR, 'jobs'))
 
-#from workflow_final import upload_logs
+# from workflow_final import upload_logs
 
 '''
 method putNextJobsOnQueue may need to use another lock
@@ -28,9 +30,10 @@ executing
 
 '''
 
+
 def relval_test_process(job=None):
     # unpack the job and execute
-    #jobID, jobStep, jobCumulativeTime, jobSelfTime, jobCommands = job.items()
+    # jobID, jobStep, jobCumulativeTime, jobSelfTime, jobCommands = job.items()
     jobID = job[0]
     jobStep = job[1]
     jobCumulativeTime = job[2]
@@ -41,24 +44,26 @@ def relval_test_process(job=None):
     prevJobExit = job[7]
     jobSelfTime = 0.001
 
-
+    startTime = int(time.time())
 
     while True:
-        #print 'eta: ', jobID, jobStep, jobSelfTime
+        # print 'eta: ', jobID, jobStep, jobSelfTime
         sleep(jobSelfTime)
         jobSelfTime -= 0.001
         if 0 > jobSelfTime:
             print 'breaking'
             break
 
-    #return {'id': jobID, 'step': jobStep, 'exit_code': 0, 'mem': int(jobMem)}
+    endTime = int(time.time())
+
+    # return {'id': jobID, 'step': jobStep, 'exit_code': 0, 'mem': int(jobMem)}
     return {'id': jobID, 'step': jobStep, 'exit_code': '0', 'mem': int(jobMem), 'cpu': int(jobCPU),
-                'stdout': 'notRun', 'stderr': 'notRun'}
+            'stdout': 'notRun', 'stderr': 'notRun', 'startTime': startTime, 'endTime': endTime}
 
 
 def process_relval_workflow_step(job=None):
     # unpack the job and execute
-    #jobID, jobStep, jobCumulativeTime, jobSelfTime, jobCommands = job.items()
+    # jobID, jobStep, jobCumulativeTime, jobSelfTime, jobCommands = job.items()
     jobID = job[0]
     jobStep = job[1]
     jobCumulativeTime = job[2]
@@ -67,33 +72,33 @@ def process_relval_workflow_step(job=None):
     jobCPU = job[5]
     jobCommands = job[6]
     prevJobExit = job[7]
-    #jobCommands = 'ls'
+    # jobCommands = 'ls'
 
     exit_code = 0
 
-    start_time = 0
-
     if prevJobExit is not 0:
         return {'id': jobID, 'step': jobStep, 'exit_code': 'notRun', 'mem': int(jobMem), 'cpu': int(jobCPU),
-                'stdout': 'notRun', 'stderr': 'notRun'}
+                'stdout': 'notRun', 'stderr': 'notRun', 'startTime': 0, 'endTime': 0}
+
+    start_time = int(time.time())
 
     child_process = subprocess.Popen(jobCommands, shell=True)
-    #, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
-    stdout =''
+    # , stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+    stdout = ''
     stderr = ''
-    #child_process.communicate()
-    #exit_code = child_process.returncode
+    # child_process.communicate()
+    # exit_code = child_process.returncode
     exit_code = os.waitpid(child_process.pid, 0)[1]
-    #to test the non zero exit code
+    # to test the non zero exit code
 
-    stop_time = 0
+    endTime = int(time.time())
 
     return {'id': jobID, 'step': jobStep, 'exit_code': exit_code, 'mem': int(jobMem), 'cpu': int(jobCPU),
-            'stdout': stdout, 'stderr': stderr}
-    #start a subprocess, return it's output
+            'stdout': stdout, 'stderr': stderr, 'startTime': start_time, 'endTime': endTime}
+    # start a subprocess, return it's output
+
 
 def getWorkflowDuration(workflowFolder=None):
-
     total_time = 0
     for i in os.listdir(workflowFolder):
         if i.find('wf_stats') is not -1:
@@ -107,8 +112,8 @@ def getWorkflowDuration(workflowFolder=None):
 
     return total_time
 
-def writeWorkflowLog(workflowFolder=None, workflowLogsJson=None):
 
+def writeWorkflowLog(workflowFolder=None, workflowLogsJson=None):
     result_keys = sorted(workflowLogsJson, reverse=False)
     result_keys.remove('finishing_exit')
     workflow_subfolder = workflowFolder.split('/')[-1]
@@ -117,68 +122,73 @@ def writeWorkflowLog(workflowFolder=None, workflowLogsJson=None):
     exit_codes = []
     passed = []
     failed = []
-    #print workflow_subfolder
+    # print workflow_subfolder
     for i in result_keys:
 
-        #print i, workflowLogsJson[i]
+        # print i, workflowLogsJson[i]
         if workflowLogsJson[i]['exit_code'] is 0:
-            steps_strings.append(i+'-PASSED')
+            steps_strings.append(i + '-PASSED')
             passed.append('1')
             failed.append('0')
             exit_codes.append('0')
         elif workflowLogsJson[i]['exit_code'] is 'notRun':
-            steps_strings.append(i+'-NOTRUN')
+            steps_strings.append(i + '-NOTRUN')
             passed.append('0')
             failed.append('0')
             exit_codes.append('0')
         else:
-            steps_strings.append(i+'-FAILED')
+            steps_strings.append(i + '-FAILED')
             passed.append('0')
             failed.append('1')
             exit_codes.append(str(workflowLogsJson[i]['exit_code']))
 
-    output_log = workflow_subfolder+' '+\
-        ' '.join(steps_strings)+' '+\
-        ' - time;'+' '+\
-        'exit:'+' '+\
-        ' '.join(exit_codes)+' '+\
-        '\n'+' '+\
-        ' '.join(passed) + ' test passed,'+' '+\
-        ' '.join(failed) +' tests failed'
+    output_log = workflow_subfolder + ' ' + \
+                 ' '.join(steps_strings) + ' ' + \
+                 ' - time;' + ' ' + \
+                 'exit:' + ' ' + \
+                 ' '.join(exit_codes) + ' ' + \
+                 '\n' + ' ' + \
+                 ' '.join(passed) + ' test passed,' + ' ' + \
+                 ' '.join(failed) + ' tests failed'
     print output_log
 
     with open(os.path.join(workflowFolder, 'workflow.log'), 'w') as wflog_output:
         wflog_output.write(output_log)
-    #put also the hostname
+    # put also the hostname
     with open(os.path.join(workflowFolder, 'hostname'), 'w') as hostname_output:
         hostname_output.write(os.uname()[1])
 
-def finilazeWorkflow(workflowID=None, workflowStep=None, wf_base_folder=None, job_results=None):
 
-    #getWorkflowDuration(wf_base_folder)
-    #writeWorkflowLog(wf_base_folder, job_results)
-    #finilazeWorkflow(wf_base_folder, workflowID)
+def getAverageStatsFromJSONlogs(aLog=None):
+    print aLog
+
+
+def finilazeWorkflow(workflowID=None, workflowStep=None, wf_base_folder=None, job_results=None):
+    print 'wf duration (all steps): ', getWorkflowDuration(wf_base_folder)
+
+    print workflowID, workflowStep, wf_base_folder, job_results
+    writeWorkflowLog(wf_base_folder, job_results)
+
     print 'finishing from callback'
 
 
 class workerThread(Thread):
-
     def __init__(self, target, *args):
         super(workerThread, self).__init__()
         self._target = target
         self._args = args
-        #self.name = str(args[0] + ' ' + args[1])
+        # self.name = str(args[0] + ' ' + args[1])
         self.resultQueue = None
         self.getNextJobs = None
 
     def run(self):
         result = self._target(*self._args)
-        #put the result when the task is finished
-        #result = result+' '+self.name
+        # put the result when the task is finished
+        # result = result+' '+self.name
         self.resultQueue.put(result)
 
+
 class JobsManager(object):
-    
     __metaclass__ = Singleton
 
     def __init__(self, jobs=None):
@@ -189,18 +199,18 @@ class JobsManager(object):
         self.results = {}
         self.availableMemory = None
         self.availableCPU = None
-        self.jobs_lock = Lock() # lock when touching jobs structure
+        self.jobs_lock = Lock()  # lock when touching jobs structure
         self.started_jobs_lock = Lock()
-        self.results_lock = Lock() # lock when touching results structure
+        self.results_lock = Lock()  # lock when touching results structure
         self.error_codes_map = None
-        self.translate_exit_codes = False # set this flag to true to translate codes
+        self.translate_exit_codes = False  # set this flag to true to translate codes
 
         ''' 
         add the thread jobs that put jobs on execution queue
         and finilizes them here
         '''
 
-        self.started_jobs = [] # jobs already started
+        self.started_jobs = []  # jobs already started
         self.putJobsOnProcessQueue = Thread(target=self.putJobsOnQueue)
         self.getProcessedJobs = Thread(target=self.getFinishedJobs)
         self.toProcessQueue = None
@@ -223,7 +233,7 @@ class JobsManager(object):
 
     def checkIfEnoughMemory(self, mem_value=0):
         return self.availableMemory > mem_value
-        #or use a record of the remaining memory
+        # or use a record of the remaining memory
 
     def checkIfEnoughCPU(self, cpu_value=0):
         return self.availableCPU > cpu_value
@@ -239,10 +249,10 @@ class JobsManager(object):
                 print 'to process queue completed, breaking put jobs on queue', '\n'
                 break
 
-            #get jobs from the structure put them on queue to process
-            self.counter.acquire() #acquire resource once, the finishing thread would release it for each finished job
+            # get jobs from the structure put them on queue to process
+            self.counter.acquire()  # acquire resource once, the finishing thread would release it for each finished job
             next_jobs = self.getNextJobs()
-            print 'put jobs on queue getting next jobs:', '\n' #, next_jobs
+            print 'put jobs on queue getting next jobs:', '\n'  # , next_jobs
             self.putNextJobsOnQueue(next_jobs)
 
     def getNextJobs(self, sort_function=None):
@@ -264,7 +274,7 @@ class JobsManager(object):
                                 prev_exit = self.results[i][s]['exit_code']
                                 break
 
-                current_step = sorted( self.jobs[i].keys() )[0]
+                current_step = sorted(self.jobs[i].keys())[0]
                 if i not in self.jobs_result_folders:
                     self.jobs_result_folders[i] = self.jobs[i][current_step]['results_folder']
                 cumulative_time = sum([self.jobs[i][j]['avg_time'] for j in self.jobs[i]])
@@ -273,7 +283,7 @@ class JobsManager(object):
                            self.jobs[i][current_step]['commands'], prev_exit)
 
                 next_jobs.append(element)
-                #print i, j, self.jobs[i][j]['avg_time']
+                # print i, j, self.jobs[i][j]['avg_time']
 
         return sorted(next_jobs, key=itemgetter(2), reverse=True)
 
@@ -302,7 +312,7 @@ class JobsManager(object):
                 self.started_jobs.append(job[0])
                 self.availableMemory = self.availableMemory - job[4]
                 self.availableCPU = self.availableCPU - job[5]
-                #thread_job = workerThread(process_relval_workflow_step, job)
+                # thread_job = workerThread(process_relval_workflow_step, job)
                 thread_job = workerThread(relval_test_process, job)
                 '''
                 callbacks calls
@@ -315,7 +325,7 @@ class JobsManager(object):
                 self.toProcessQueue.put(thread_job)
 
             self._removeJobFromWorkflow(job[0], job[1])
-            #print self.jobs
+            # print self.jobs
 
         print 'jobs putted on queue'
 
@@ -328,12 +338,12 @@ class JobsManager(object):
         while True:
 
             print 'get finished jobs', '\n'
-            #print 'jobs from finished jobs', '\n', self.jobs
-            finishedJob = self.processedQueue.get() #gets the return value from the executed function, i.e. wf step resu
+            # print 'jobs from finished jobs', '\n', self.jobs
+            finishedJob = self.processedQueue.get()  # gets the return value from thread function, i.e. wf step result
             self.finishJob(finishedJob)
-            #print finishedJob['id']
+            # print finishedJob['id']
             self.processedQueue.task_done()
-            self.counter.release() # release the lock for each finished job, putJobsOnQueue retries to put new jobs
+            self.counter.release()  # release the lock for each finished job, putJobsOnQueue retries to put new jobs
 
             print 'finished get finished jobs for ', finishedJob['id'], '\n'
 
@@ -343,10 +353,10 @@ class JobsManager(object):
 
     def finishJob(self, job=None):
         print 'finish', job['id'], job['step'], job['exit_code'], job['mem'], job['cpu']
-        #callback call when step is finished
+        # callback call when step is finished
         self._stepIsFinishing(job['id'], job['step'], self.jobs_result_folders[job['id']])
         self._insertRecordInResults(job)
-        #insert the record before removing the job since it might remove the entire job
+        # insert the record before removing the job since it might remove the entire job
 
         with self.started_jobs_lock:
             self.availableMemory += job['mem']
@@ -354,7 +364,7 @@ class JobsManager(object):
             self.started_jobs.remove(job['id'])
             print 'job removed: ', job['id']
 
-        #finish the workflow if the step was the last
+        # finish the workflow if the step was the last
 
         with self.jobs_lock:
             if not job['id'] in self.jobs:
@@ -363,17 +373,13 @@ class JobsManager(object):
                     self.results[job['id']]['finishing_exit'] = 'finished'
                     job_results = self.results[job['id']]
                     current_job_folder = self.jobs_result_folders[job['id']]
-                    #callback call when the entire workflow is finished
+                    # callback call when the entire workflow is finished
                     self._workflowIsFinishing(job['id'], job['step'], current_job_folder, job_results)
 
-                    #getWorkflowDuration(current_job_folder)
-                    #writeWorkflowLog(current_job_folder, job_results) #this method might write job results file 1 by 1
-                    #finilazeWorkflow(current_job_folder, job['id'])
-
-
     '''
+    protected methods
     '''
-    
+
     def _removeJobFromWorkflow(self, jobID=None, stepID=None):
         with self.jobs_lock:
             if jobID in self.jobs and stepID in self.jobs[jobID]:
@@ -393,38 +399,38 @@ class JobsManager(object):
                 self.results[result['id']] = {}
 
             self.results[result['id']][result['step']] = {'exit_code': result['exit_code'], 'stdout': result['stdout'],
-                                                          'stderr':result['stderr']}
+                                                          'stderr': result['stderr'], 'start_time': result['startTime'],
+                                                          'end_time': result['endTime'],
+                                                          'exec_time': result['endTime'] - result['startTime']}
 
-    def writeResultsInFile(self, file=None):
+    def writeResultsInFile(self, filen=None):
         with self.results_lock:
-            with open(file, 'w') as results_file:
+            with open(filen, 'w') as results_file:
                 results_file.write(json.dumps(self.results, indent=1, sort_keys=True))
+
     '''
     callback methods to be called 
     '''
 
     def _workflowIsStarting(self, *args):
         print 'wf is starting'
-        for i in args:
-            print i
         if self.workflowIsStarting:
             self.workflowIsStarting(*args)
 
     def _workflowIsFinishing(self, *args):
-        print args
+        print 'wf is finishing, job id: ', args[0]
         if self.workflowIsFinishing:
             self.workflowIsFinishing(*args)
 
     def _stepIsStarting(self, *args):
-        print args
+        print 'step is starting: ',
         if self.stepIsStarting:
             self.stepIsStarting(*args)
 
-    def _stepIsFinishing(self, * args):
+    def _stepIsFinishing(self, *args):
         print args
         if self.stepIsFinishing:
             self.stepIsFinishing(*args)
-
 
 
 ''' 
@@ -432,40 +438,32 @@ the task list
 '''
 
 if __name__ == "__main__":
-
     jobs_result = {
         "finishing_exit": "finished",
         "step1": {
-        "exit_code": 0,
-        "stderr": None,
-       "stdout": ""
-      },
-      "step2": {
-       "exit_code": 0,
-       "stderr": None,
-       "stdout": ""
-      },
-      "step3": {
-       "exit_code": 0,
-       "stderr": None,
-       "stdout": ""
-      }
+            "exit_code": 0,
+            "stderr": None,
+            "stdout": ""
+        },
+        "step2": {
+            "exit_code": 0,
+            "stderr": None,
+            "stdout": ""
+        },
+        "step3": {
+            "exit_code": 0,
+            "stderr": None,
+            "stdout": ""
+        }
     }
 
     keys_list = sorted(jobs_result, reverse=False)
 
-    #given_wf_folder = 'resources/finished_wf_folders/matrix/2.0_ProdTTbar+ProdTTbar+DIGIPROD1+RECOPROD1'
+    # given_wf_folder = 'resources/finished_wf_folders/matrix/2.0_ProdTTbar+ProdTTbar+DIGIPROD1+RECOPROD1'
     given_wf_folder = 'resources/finished_wf_folders/matrix/1.0_ProdMinBias+ProdMinBias+DIGIPROD1+RECOPROD1'
 
     writeWorkflowLog(given_wf_folder, jobs_result)
 
     getWorkflowDuration(given_wf_folder)
 
-
     pass
-
-
-
-
-
-
