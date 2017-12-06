@@ -189,6 +189,11 @@ def worklowIsStartingFunc(workflowID=None, wf_base_folder=None):
         new_jobs_commnds = []
         for comm in jobs_commands:
             comm['jobid'] = workflowID+'('+str(comm_num+1)+'/'+str(num_of_jobs)+')'
+            comm['state'] = 'Pending'
+            comm['exec_time'] = 0
+            comm['start_time'] = 0
+            comm['end_time'] = 0
+            comm['exit_code'] = -1
             new_jobs_commnds.append(comm)
             comm_num += 1
         job_description['commands'] = new_jobs_commnds
@@ -199,11 +204,30 @@ def worklowIsStartingFunc(workflowID=None, wf_base_folder=None):
 def finilazeWorkflow(workflowID=None, wf_base_folder=None, job_results=None):
     print 'wf duration (all steps): ', getWorkflowDuration(wf_base_folder)
     print workflowID, wf_base_folder, job_results
-    writeWorkflowLog(wf_base_folder, job_results)
+    #writeWorkflowLog(wf_base_folder, job_results) #finishing function will fix this
     print 'finishing from callback'
     wfs_base = wf_base_folder.rsplit('/', 1)[0]
-    #with open(os.path.join(wfs_base, workflowID+'.json'),'a') as job_file:
-    #    job_file.write('wf is finishing \n')
+    steps_keys = job_results.keys()
+    steps_keys.remove('finishing_exit')
+    steps_keys = sorted(steps_keys)
+    print 'sorted keys are: ', steps_keys
+    wf_stats = {}
+    with open(os.path.join(wfs_base, workflowID+'.json'),'r') as job_file:
+        wf_stats = json.loads(job_file.read())
+    cmmnd_cntr = 0
+    new_cmmnds = []
+    for cmmnd in wf_stats['commands']:
+        cmmnds_element = cmmnd
+        cmmnds_element['exit_code'] = job_results[steps_keys[cmmnd_cntr]]['exit_code']
+        cmmnds_element['start_time'] = job_results[steps_keys[cmmnd_cntr]]['start_time']
+        cmmnds_element['end_time'] = job_results[steps_keys[cmmnd_cntr]]['end_time']
+        cmmnds_element['exec_time'] = job_results[steps_keys[cmmnd_cntr]]['exec_time']
+        new_cmmnds.append(cmmnds_element)
+        cmmnd_cntr += 1
+    
+    wf_stats['commands'] = new_cmmnds
+    with open(os.path.join(wfs_base, workflowID+'.json'),'w') as job_file:
+        job_file.write(json.dumps(wf_stats, indent=1, sort_keys=True))
 
 def stepIsStartingFunc(workflowID=None, workflowStep=None, wf_base_folder=None):
 
@@ -213,6 +237,7 @@ def stepIsStartingFunc(workflowID=None, workflowStep=None, wf_base_folder=None):
     #with open(os.path.join(wfs_base, workflowID+'.json'),'a') as job_file:
     #    job_file.write('step '+ workflowStep + ' is starting \n')
 
+
 def stepIsFinishingFunc(workflowID=None, workflowStep=None, wf_base_folder=None):
 
     print 'print from step is finishing'
@@ -220,7 +245,6 @@ def stepIsFinishingFunc(workflowID=None, workflowStep=None, wf_base_folder=None)
     wfs_base = wf_base_folder.rsplit('/', 1)[0]
     #with open(os.path.join(wfs_base, workflowID+'.json'),'a') as job_file:
     #    job_file.write('step '+ workflowStep + ' is finishing \n')
-
 
 '''
 end of callbacks. you are shooting a fly with bazooka here. whatever
