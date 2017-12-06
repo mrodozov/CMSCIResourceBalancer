@@ -98,7 +98,6 @@ if __name__ == "__main__":
     ''' up to here it constructs the jobs stats'''
 
 
-        
     jm = JobsManager(matrixMap)
     jm.toProcessQueue = toProcessQueue
     jm.processedQueue = processedTasksQueue
@@ -129,10 +128,4 @@ if __name__ == "__main__":
     print jm.results
 
     jm.writeResultsInFile('jobs_results_ideRun.json')
-    
-
-
     #print wf_list
-    
-
-

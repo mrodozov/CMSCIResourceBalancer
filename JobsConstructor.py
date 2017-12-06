@@ -192,7 +192,7 @@ class JobsConstructor(object):
 if __name__ == "__main__":
 
     opts = None
-    release = 'CMSSW_9_4_X*'
+    release = 'CMSSW_10_0_X*'
     arch = 'slc6_amd64_gcc630'
     days = 7
     page_size = 0

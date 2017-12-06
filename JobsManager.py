@@ -54,6 +54,9 @@ def relval_test_process(job=None):
             print 'breaking'
             break
 
+    #have some delay for the test
+    sleep(2)
+
     endTime = int(time.time())
 
     # return {'id': jobID, 'step': jobStep, 'exit_code': 0, 'mem': int(jobMem)}
@@ -101,7 +104,7 @@ def process_relval_workflow_step(job=None):
 def getWorkflowDuration(workflowFolder=None):
     total_time = 0
     for i in os.listdir(workflowFolder):
-        if i.find('wf_stats') is not -1:
+        if i.find('wf_stats-') is not -1:
             with open(os.path.join(workflowFolder, i), 'r') as wf_stats_file:
                 wf_stats_obj = json.loads(wf_stats_file.read())
                 total_time += wf_stats_obj[-1]['time']
@@ -117,6 +120,7 @@ def writeWorkflowLog(workflowFolder=None, workflowLogsJson=None):
     result_keys = sorted(workflowLogsJson, reverse=False)
     result_keys.remove('finishing_exit')
     workflow_subfolder = workflowFolder.split('/')[-1]
+    print 'workflow subfolder is:', workflow_subfolder
     steps_strings = []
     time_string = ''
     exit_codes = []
@@ -158,19 +162,69 @@ def writeWorkflowLog(workflowFolder=None, workflowLogsJson=None):
     with open(os.path.join(workflowFolder, 'hostname'), 'w') as hostname_output:
         hostname_output.write(os.uname()[1])
 
-
 def getAverageStatsFromJSONlogs(aLog=None):
     print aLog
 
+'''
+callbacks to be hooked
+'''
 
-def finilazeWorkflow(workflowID=None, workflowStep=None, wf_base_folder=None, job_results=None):
+def worklowIsStartingFunc(workflowID=None, wf_base_folder=None):
+    print 'print from wf is starting'
+    wfs_base = wf_base_folder.rsplit('/', 1)[0]
+    print workflowID, wf_base_folder, wfs_base
+    job_description = None
+    with open(os.path.join(wfs_base,'jobs.json'),'r') as jobs_file:
+        stats_obj = json.loads(jobs_file.read())
+        for obj in stats_obj['jobs']:
+            #print 'object is ', obj
+            if 'name' in obj and obj['name'] == workflowID:
+                print 'object is ', obj
+                job_description = obj
+                break
+    if job_description:
+        num_of_jobs = len(job_description['commands'])
+        jobs_commands = job_description['commands']
+        comm_num = 0
+        new_jobs_commnds = []
+        for comm in jobs_commands:
+            comm['jobid'] = workflowID+'('+str(comm_num+1)+'/'+str(num_of_jobs)+')'
+            new_jobs_commnds.append(comm)
+            comm_num += 1
+        job_description['commands'] = new_jobs_commnds
+        job_description['state'] = 'Done'
+        with open(os.path.join(wfs_base, workflowID+'.json'), 'w') as job_file:
+            job_file.write(json.dumps(job_description, indent=1, sort_keys=True))
+
+def finilazeWorkflow(workflowID=None, wf_base_folder=None, job_results=None):
     print 'wf duration (all steps): ', getWorkflowDuration(wf_base_folder)
-
-    print workflowID, workflowStep, wf_base_folder, job_results
+    print workflowID, wf_base_folder, job_results
     writeWorkflowLog(wf_base_folder, job_results)
-
     print 'finishing from callback'
+    wfs_base = wf_base_folder.rsplit('/', 1)[0]
+    #with open(os.path.join(wfs_base, workflowID+'.json'),'a') as job_file:
+    #    job_file.write('wf is finishing \n')
 
+def stepIsStartingFunc(workflowID=None, workflowStep=None, wf_base_folder=None):
+
+    print 'print from step is starting'
+    print workflowID, workflowStep, wf_base_folder
+    wfs_base = wf_base_folder.rsplit('/', 1)[0]
+    #with open(os.path.join(wfs_base, workflowID+'.json'),'a') as job_file:
+    #    job_file.write('step '+ workflowStep + ' is starting \n')
+
+def stepIsFinishingFunc(workflowID=None, workflowStep=None, wf_base_folder=None):
+
+    print 'print from step is finishing'
+    print workflowID, workflowStep, wf_base_folder
+    wfs_base = wf_base_folder.rsplit('/', 1)[0]
+    #with open(os.path.join(wfs_base, workflowID+'.json'),'a') as job_file:
+    #    job_file.write('step '+ workflowStep + ' is finishing \n')
+
+
+'''
+end of callbacks. you are shooting a fly with bazooka here. whatever
+'''
 
 class workerThread(Thread):
     def __init__(self, target, *args):
@@ -222,10 +276,10 @@ class JobsManager(object):
         API calls provided externally as functions that would be called with specific arguments
         '''
 
-        self.workflowIsStarting = None
+        self.workflowIsStarting = worklowIsStartingFunc
         self.workflowIsFinishing = finilazeWorkflow
-        self.stepIsStarting = None
-        self.stepIsFinishing = None
+        self.stepIsStarting = stepIsStartingFunc
+        self.stepIsFinishing = stepIsFinishingFunc
 
     '''
     methods to check resources availability
@@ -319,7 +373,7 @@ class JobsManager(object):
                 '''
                 if job[0] not in self.results:
                     # its the first step of the wf, execute one time pre wf callback
-                    self._workflowIsStarting(job[0], job[1], self.jobs_result_folders[job[0]])
+                    self._workflowIsStarting(job[0], self.jobs_result_folders[job[0]])
                 # and once per step
                 self._stepIsStarting(job[0], job[1], self.jobs_result_folders[job[0]])
                 self.toProcessQueue.put(thread_job)
@@ -374,7 +428,7 @@ class JobsManager(object):
                     job_results = self.results[job['id']]
                     current_job_folder = self.jobs_result_folders[job['id']]
                     # callback call when the entire workflow is finished
-                    self._workflowIsFinishing(job['id'], job['step'], current_job_folder, job_results)
+                    self._workflowIsFinishing(job['id'], current_job_folder, job_results)
 
     '''
     protected methods
@@ -413,17 +467,17 @@ class JobsManager(object):
     '''
 
     def _workflowIsStarting(self, *args):
-        print 'wf is starting'
+        #print 'wf is starting'
         if self.workflowIsStarting:
             self.workflowIsStarting(*args)
 
     def _workflowIsFinishing(self, *args):
-        print 'wf is finishing, job id: ', args[0]
+        #print 'wf is finishing, job id: ', args[0]
         if self.workflowIsFinishing:
             self.workflowIsFinishing(*args)
 
     def _stepIsStarting(self, *args):
-        print 'step is starting: ',
+        #print 'step is starting: ',
         if self.stepIsStarting:
             self.stepIsStarting(*args)
 
