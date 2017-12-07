@@ -467,7 +467,7 @@ class JobsManager(object):
     def _stepIsStarting(self, *args):
         #print 'step is starting: ',
         if self.stepIsStarting:
-            self.stepIsStarting(self, *args)
+            self.stepIsStarting(*args)
 
     def _stepIsFinishing(self, *args):
         print args
