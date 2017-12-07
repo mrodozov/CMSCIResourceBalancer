@@ -9,11 +9,17 @@ for this the class has to
 
 import json
 from Singleton import Singleton
-from es_utils import get_payload
 from time import time
 import subprocess
 import os
-#from cmssw_known_errors import get_known_errors
+import sys
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(sys.argv[0]))
+CMS_BOT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR,'..'))
+sys.path.insert(0,CMS_BOT_DIR)
+sys.path.insert(0,SCRIPT_DIR)
+
+from es_utils import get_payload
 
 class JobsConstructor(object):
 
@@ -29,7 +35,7 @@ class JobsConstructor(object):
 
     def getWorkflowStatsFromES(self, release='*', arch='*', lastNdays=7, page_size=0):
 
-        query_url = 'http://cmses-master01.cern.ch:9200/relvals_stats_*/_search'
+        query_url = 'http://cmses-master02.cern.ch:9200/relvals_stats_*/_search'
 
         query_datsets = """
         {
@@ -104,10 +110,9 @@ class JobsConstructor(object):
             if ent_from >= total_hits:
                 break
 
-        #print json.dumps(json_out, indent=2, sort_keys=True, separators=(',', ': '))
         return json_out[0]['hits']['hits']
 
-    def getJobsCommands(self, workflow_matrix_list=None,workflows_limit=None, workflows_dir=None):
+    def getJobsCommands(self, workflow_matrix_list=None,workflows_limit=None, workflows_dir=os.environ["CMSSW_BASE"]+"/pyRelval/"):
         #run runTheMatrix and parse the output for each workflow, example results structure in resources/wf.json
         #for now, get it from the file resources/wf.json
         #run_matrix_process = subprocess.Popen('voms-proxy-init;runTheMatrix.py -l '+workflow_matrix_list+' -i all --maxSteps=0 -j 20',
@@ -151,15 +156,14 @@ class JobsConstructor(object):
 
     def constructJobsMatrix(self, release, arch, days, page_size, workflow_matrix_list, wf_limit,wfs_basedir):
         matrixMap = self.getJobsCommands(workflow_matrix_list, wf_limit, wfs_basedir)
-        #jobs_stats = self.getWorkflowStatsFromES(release, arch, days, page_size)
+        jobs_stats = self.getWorkflowStatsFromES(release, arch, days, page_size)
         #for local test get the stats from a file
-
-        #with open('resources/wf.json') as matrixFile:
-            #matrixMap = json.loads(matrixFile.read())
-        with open('resources/exampleESresult.json') as esQueryFromFile:
+	'''
+        with open('resources/wf.json') as matrixFile:
+            matrixMap = json.loads(matrixFile.read())
+        with open('resources/exampleESqueryResult.json') as esQueryFromFile:
             jobs_stats = json.loads(esQueryFromFile.read())[0]['hits']['hits']
-            #jobs_stats = json.loads(esQueryFromFile.read())
-
+	'''
         ESworkflowsData = jobs_stats
 
         for i in ESworkflowsData:
@@ -192,7 +196,7 @@ class JobsConstructor(object):
 if __name__ == "__main__":
 
     opts = None
-    release = 'CMSSW_10_0_X*'
+    release = 'CMSSW_9_3_X*'
     arch = 'slc6_amd64_gcc630'
     days = 7
     page_size = 0
@@ -203,15 +207,15 @@ if __name__ == "__main__":
         wf_list = wf_list[:-1]
 
     
-    #known_errors = get_known_errors(release, arch, 'relvals')
+    known_errors = get_known_errors(release, arch, 'relvals')
 
     jc = JobsConstructor(wf_list)
-    #jc.getJobsCommands(wf_list)
+    jc.getJobsCommands(wf_list)
 
     #print wf_list
 
     limit = 20
 
-    json_out = jc.constructJobsMatrix(release, arch, days, page_size, wf_list, limit,'resources/1of5folder/1of5/testJobs/')
+    json_out = jc.constructJobsMatrix(release, arch, days, page_size, wf_list, limit,os.environ["CMSSW_BASE"]+"/pyRelval/")
     print json.dumps(json_out, indent=2, sort_keys=True, separators=(',', ': '))
-    #print len(json_out)
+    print len(json_out)

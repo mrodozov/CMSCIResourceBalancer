@@ -14,7 +14,6 @@ from threading import Lock, Thread, Semaphore
 from time import sleep
 from operator import itemgetter
 
-
 SCRIPT_DIR = os.path.dirname(os.path.abspath(sys.argv[0]))
 CMS_BOT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, '..'))
 sys.path.insert(0, CMS_BOT_DIR)
@@ -80,7 +79,7 @@ def process_relval_workflow_step(job=None):
     exit_code = 0
 
     if prevJobExit is not 0:
-        return {'id': jobID, 'step': jobStep, 'exit_code': 'notRun', 'mem': int(jobMem), 'cpu': int(jobCPU),
+        return {'id': jobID, 'step': jobStep, 'exit_code': -1, 'mem': int(jobMem), 'cpu': int(jobCPU),
                 'stdout': 'notRun', 'stderr': 'notRun', 'startTime': 0, 'endTime': 0}
 
     start_time = int(time.time())
@@ -228,6 +227,16 @@ def finilazeWorkflow(workflowID=None, wf_base_folder=None, job_results=None):
     wf_stats['commands'] = new_cmmnds
     with open(os.path.join(wfs_base, workflowID+'.json'),'w') as job_file:
         job_file.write(json.dumps(wf_stats, indent=1, sort_keys=True))
+    
+    with open(os.path.join(wf_base_folder, 'hostname'), 'w') as hostname_output:
+        hostname_output.write(os.uname()[1])
+    
+    os.chdir(wfs_base)
+    #this is weird, try to put it in a function only. or put it in a try catch
+    p=subprocess.Popen("%s/jobs/workflow_final.py %s" % (CMS_BOT_DIR, workflowID+'.json'), shell=True)
+    e=os.waitpid(p.pid,0)[1]
+    if e: exit(e)
+    
 
 def stepIsStartingFunc(workflowID=None, workflowStep=None, wf_base_folder=None):
 
@@ -390,8 +399,8 @@ class JobsManager(object):
                 self.started_jobs.append(job[0])
                 self.availableMemory = self.availableMemory - job[4]
                 self.availableCPU = self.availableCPU - job[5]
-                # thread_job = workerThread(process_relval_workflow_step, job)
-                thread_job = workerThread(relval_test_process, job)
+                thread_job = workerThread(process_relval_workflow_step, job)
+                #thread_job = workerThread(relval_test_process, job)
                 '''
                 callbacks calls
                 '''
