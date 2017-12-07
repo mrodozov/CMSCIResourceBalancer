@@ -19,16 +19,6 @@ CMS_BOT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, '..'))
 sys.path.insert(0, CMS_BOT_DIR)
 sys.path.insert(0, os.path.join(CMS_BOT_DIR, 'jobs'))
 
-# from workflow_final import upload_logs
-
-'''
-method putNextJobsOnQueue may need to use another lock
-whenever it starts to prevent method getFinishedJobs while loop to
-get called more than once while putNextJobsOnQueue is still
-executing 
-
-'''
-
 
 def relval_test_process(job=None):
     # unpack the job and execute
@@ -114,61 +104,21 @@ def getWorkflowDuration(workflowFolder=None):
 
     return total_time
 
-
-def writeWorkflowLog(workflowFolder=None, workflowLogsJson=None):
-    result_keys = sorted(workflowLogsJson, reverse=False)
-    result_keys.remove('finishing_exit')
-    workflow_subfolder = workflowFolder.split('/')[-1]
-    print 'workflow subfolder is:', workflow_subfolder
-    steps_strings = []
-    time_string = ''
-    exit_codes = []
-    passed = []
-    failed = []
-    # print workflow_subfolder
-    for i in result_keys:
-
-        # print i, workflowLogsJson[i]
-        if workflowLogsJson[i]['exit_code'] is 0:
-            steps_strings.append(i + '-PASSED')
-            passed.append('1')
-            failed.append('0')
-            exit_codes.append('0')
-        elif workflowLogsJson[i]['exit_code'] is 'notRun':
-            steps_strings.append(i + '-NOTRUN')
-            passed.append('0')
-            failed.append('0')
-            exit_codes.append('0')
-        else:
-            steps_strings.append(i + '-FAILED')
-            passed.append('0')
-            failed.append('1')
-            exit_codes.append(str(workflowLogsJson[i]['exit_code']))
-
-    output_log = workflow_subfolder + ' ' + \
-                 ' '.join(steps_strings) + ' ' + \
-                 ' - time;' + ' ' + \
-                 'exit:' + ' ' + \
-                 ' '.join(exit_codes) + ' ' + \
-                 '\n' + ' ' + \
-                 ' '.join(passed) + ' test passed,' + ' ' + \
-                 ' '.join(failed) + ' tests failed'
-    print output_log
-
-    with open(os.path.join(workflowFolder, 'workflow.log'), 'w') as wflog_output:
-        wflog_output.write(output_log)
-    # put also the hostname
-    with open(os.path.join(workflowFolder, 'hostname'), 'w') as hostname_output:
-        hostname_output.write(os.uname()[1])
-
-def getAverageStatsFromJSONlogs(aLog=None):
-    print aLog
-
 '''
 callbacks to be hooked
 '''
 
-def worklowIsStartingFunc(workflowID=None, wf_base_folder=None):
+'''
+ the calling_object is a jobManager obj that calls the function itself, so that the function can read its mem vars
+ thus the calling object (the manager) is unaware of the function, but its the function responsibility to
+ 'know' about it's caller. here the results are taken from the job manager. pigeons with bazooka indeed
+ It's not meant to be smart, it's meant to be right
+'''
+
+def worklowIsStartingFunc(workflowID=None, calling_object=None):
+
+    wf_base_folder = calling_object.jobs_result_folders[workflowID]
+
     print 'print from wf is starting'
     wfs_base = wf_base_folder.rsplit('/', 1)[0]
     print workflowID, wf_base_folder, wfs_base
@@ -200,10 +150,13 @@ def worklowIsStartingFunc(workflowID=None, wf_base_folder=None):
         with open(os.path.join(wfs_base, workflowID+'.json'), 'w') as job_file:
             job_file.write(json.dumps(job_description, indent=1, sort_keys=True))
 
-def finilazeWorkflow(workflowID=None, wf_base_folder=None, job_results=None):
+def finilazeWorkflow(workflowID=None, calling_object=None):
+
+    job_results = calling_object.results[workflowID]
+    wf_base_folder = calling_object.jobs_result_folders[workflowID]
+
     print 'wf duration (all steps): ', getWorkflowDuration(wf_base_folder)
     print workflowID, wf_base_folder, job_results
-    #writeWorkflowLog(wf_base_folder, job_results) #finishing function will fix this
     print 'finishing from callback'
     wfs_base = wf_base_folder.rsplit('/', 1)[0]
     steps_keys = job_results.keys()
@@ -223,7 +176,7 @@ def finilazeWorkflow(workflowID=None, wf_base_folder=None, job_results=None):
         cmmnds_element['exec_time'] = job_results[steps_keys[cmmnd_cntr]]['exec_time']
         new_cmmnds.append(cmmnds_element)
         cmmnd_cntr += 1
-    
+
     wf_stats['commands'] = new_cmmnds
     with open(os.path.join(wfs_base, workflowID+'.json'),'w') as job_file:
         job_file.write(json.dumps(wf_stats, indent=1, sort_keys=True))
@@ -231,14 +184,15 @@ def finilazeWorkflow(workflowID=None, wf_base_folder=None, job_results=None):
     with open(os.path.join(wf_base_folder, 'hostname'), 'w') as hostname_output:
         hostname_output.write(os.uname()[1])
     
-    os.chdir(wfs_base)
+    #os.chdir(wfs_base)
     #this is weird, try to put it in a function only. or put it in a try catch
-    p=subprocess.Popen("%s/jobs/workflow_final.py %s" % (CMS_BOT_DIR, workflowID+'.json'), shell=True)
-    e=os.waitpid(p.pid,0)[1]
-    if e: exit(e)
-    
+    #p=subprocess.Popen("%s/jobs/workflow_final.py %s" % (CMS_BOT_DIR, workflowID+'.json'), shell=True)
+    #e=os.waitpid(p.pid,0)[1]
+    #if e: exit(e)
 
-def stepIsStartingFunc(workflowID=None, workflowStep=None, wf_base_folder=None):
+def stepIsStartingFunc(workflowID=None, workflowStep=None, calling_object=None):
+
+    wf_base_folder = calling_object.jobs_result_folders[workflowID]
 
     print 'print from step is starting'
     print workflowID, workflowStep, wf_base_folder
@@ -247,8 +201,9 @@ def stepIsStartingFunc(workflowID=None, workflowStep=None, wf_base_folder=None):
     #    job_file.write('step '+ workflowStep + ' is starting \n')
 
 
-def stepIsFinishingFunc(workflowID=None, workflowStep=None, wf_base_folder=None):
+def stepIsFinishingFunc(workflowID=None, workflowStep=None, calling_object=None):
 
+    wf_base_folder = calling_object.jobs_result_folders[workflowID]
     print 'print from step is finishing'
     print workflowID, workflowStep, wf_base_folder
     wfs_base = wf_base_folder.rsplit('/', 1)[0]
@@ -399,16 +354,16 @@ class JobsManager(object):
                 self.started_jobs.append(job[0])
                 self.availableMemory = self.availableMemory - job[4]
                 self.availableCPU = self.availableCPU - job[5]
-                thread_job = workerThread(process_relval_workflow_step, job)
-                #thread_job = workerThread(relval_test_process, job)
+                #thread_job = workerThread(process_relval_workflow_step, job)
+                thread_job = workerThread(relval_test_process, job)
                 '''
                 callbacks calls
                 '''
                 if job[0] not in self.results:
                     # its the first step of the wf, execute one time pre wf callback
-                    self._workflowIsStarting(job[0], self.jobs_result_folders[job[0]])
+                    self._workflowIsStarting(job[0], self)
                 # and once per step
-                self._stepIsStarting(job[0], job[1], self.jobs_result_folders[job[0]])
+                self._stepIsStarting(job[0], job[1], self)
                 self.toProcessQueue.put(thread_job)
 
             self._removeJobFromWorkflow(job[0], job[1])
@@ -441,7 +396,7 @@ class JobsManager(object):
     def finishJob(self, job=None):
         print 'finish', job['id'], job['step'], job['exit_code'], job['mem'], job['cpu']
         # callback call when step is finished
-        self._stepIsFinishing(job['id'], job['step'], self.jobs_result_folders[job['id']])
+        self._stepIsFinishing(job['id'], job['step'], self)
         self._insertRecordInResults(job)
         # insert the record before removing the job since it might remove the entire job
 
@@ -461,7 +416,7 @@ class JobsManager(object):
                     job_results = self.results[job['id']]
                     current_job_folder = self.jobs_result_folders[job['id']]
                     # callback call when the entire workflow is finished
-                    self._workflowIsFinishing(job['id'], current_job_folder, job_results)
+                    self._workflowIsFinishing(job['id'], self)
 
     '''
     protected methods
@@ -512,7 +467,7 @@ class JobsManager(object):
     def _stepIsStarting(self, *args):
         #print 'step is starting: ',
         if self.stepIsStarting:
-            self.stepIsStarting(*args)
+            self.stepIsStarting(self, *args)
 
     def _stepIsFinishing(self, *args):
         print args
@@ -548,8 +503,6 @@ if __name__ == "__main__":
 
     # given_wf_folder = 'resources/finished_wf_folders/matrix/2.0_ProdTTbar+ProdTTbar+DIGIPROD1+RECOPROD1'
     given_wf_folder = 'resources/finished_wf_folders/matrix/1.0_ProdMinBias+ProdMinBias+DIGIPROD1+RECOPROD1'
-
-    writeWorkflowLog(given_wf_folder, jobs_result)
 
     getWorkflowDuration(given_wf_folder)
 

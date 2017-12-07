@@ -112,7 +112,7 @@ class JobsConstructor(object):
 
         return json_out[0]['hits']['hits']
 
-    def getJobsCommands(self, workflow_matrix_list=None,workflows_limit=None, workflows_dir=os.environ["CMSSW_BASE"]+"/pyRelval/"):
+    def getJobsCommands(self, workflow_matrix_list=None,workflows_limit=None, workflows_dir='resources/1of5folder/1of5/testJobs/'):
         #run runTheMatrix and parse the output for each workflow, example results structure in resources/wf.json
         #for now, get it from the file resources/wf.json
         #run_matrix_process = subprocess.Popen('voms-proxy-init;runTheMatrix.py -l '+workflow_matrix_list+' -i all --maxSteps=0 -j 20',
