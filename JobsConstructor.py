@@ -19,7 +19,7 @@ CMS_BOT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR,'..'))
 sys.path.insert(0,CMS_BOT_DIR)
 sys.path.insert(0,SCRIPT_DIR)
 
-from es_utils import get_payload
+from es_utils import get_payload, es_query, format
 
 class JobsConstructor(object):
 
@@ -33,86 +33,18 @@ class JobsConstructor(object):
     def _format(self, s, **kwds):
         return s % kwds
 
-    def getWorkflowStatsFromES(self, release='*', arch='*', lastNdays=7, page_size=0):
+    def getWorkflowStatsFromES(self, release='*', arch='*', lastNdays=7, page_size=10000):
+        stats = es_query(index='relvals_stats_*',
+                 query=format('(NOT cpu_max:0) AND (exit_code:0) AND release:%(release_cycle)s AND architecture:%(architecture)s',
+                              release_cycle=release+"_*",
+                              architecture=arch
+                             ),
+                 start_time=1000*int(time()-(86400*lastNdays)),
+                 end_time=1000*int(time()))
+        return stats['hits']['hits']
+        
+    def getJobsCommands(self, workflow_matrix_list=None,workflows_limit=None, workflows_dir="/Users/mrodozov/Projects/cms-bot/steps/"): #os.environ["CMSSW_BASE"]+"/pyRelval/"
 
-        query_url = 'http://cmses-master01.cern.ch:9200/relvals_stats_*/_search'
-
-        query_datsets = """
-        {
-          "query": {
-            "filtered": {
-              "query": {
-                "bool": {
-                  "should": [
-                    {
-                      "query_string": {
-                        "query": "release:%(release_cycle)s AND architecture:%(architecture)s", 
-                        "lowercase_expanded_terms": false
-                      }
-                    }
-                  ]
-                }
-              },
-              "filter": {
-                "bool": {
-                  "must": [
-                    {
-                      "range": {
-                        "@timestamp": {
-                          "from": %(start_time)s,
-                          "to": %(end_time)s
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "from": %(from)s,
-          "size": %(page_size)s
-        }
-        """
-        datasets = {}
-        ent_from = 0
-        json_out = []
-        info_request = False
-        queryInfo = {}
-
-        queryInfo["end_time"] = int(time() * 1000)
-        queryInfo["start_time"] = queryInfo["end_time"] - int(86400 * 1000 * lastNdays)
-        queryInfo["architecture"] = arch
-        queryInfo["release_cycle"] = release
-        queryInfo["from"] = 0
-
-        if page_size < 1:
-            info_request = True
-            queryInfo["page_size"] = 2
-        else:
-            queryInfo["page_size"] = page_size
-
-        total_hits = 0
-
-        while True:
-            queryInfo["from"] = ent_from
-            es_data = get_payload(query_url, self._format(query_datsets, **queryInfo))  # here
-            content = json.loads(es_data)
-            content.pop("_shards", None)
-            total_hits = content['hits']['total']
-            if info_request:
-                info_request = False
-                queryInfo["page_size"] = total_hits
-                continue
-            hits = len(content['hits']['hits'])
-            if hits == 0: break
-            ent_from = ent_from + hits
-            json_out.append(content)
-            if ent_from >= total_hits:
-                break
-
-        return json_out[0]['hits']['hits']
-
-    def getJobsCommands(self, workflow_matrix_list=None,workflows_limit=None, workflows_dir=os.environ["CMSSW_BASE"]+"/pyRelval/"):
         #run runTheMatrix and parse the output for each workflow, example results structure in resources/wf.json
         #for now, get it from the file resources/wf.json
         #run_matrix_process = subprocess.Popen('voms-proxy-init;runTheMatrix.py -l '+workflow_matrix_list+' -i all --maxSteps=0 -j 20',
@@ -122,7 +54,7 @@ class JobsConstructor(object):
         #wf_base_folder = '/build/cmsbld/mrodozov/testScheduler/CMSCIResourceBalancer/'
         wf_base_folder = workflows_dir
         #wf_base_folder = 'resources/wf_folders/'
-        wf_folders = [fld for fld in os.listdir(wf_base_folder) if os.path.isdir(wf_base_folder+fld)]
+        wf_folders = [fld for fld in os.listdir(wf_base_folder) if os.path.isdir(os.path.join(wf_base_folder, fld))]
         #print os.listdir(wf_base_folder)
         matrix_map = {}
         #print wf_folders
@@ -130,6 +62,7 @@ class JobsConstructor(object):
         for f in wf_folders:
             #print f
             wf_id = f.split('_')[0]
+
             if not os.path.exists(os.path.join(wf_base_folder, f, 'wf_steps.txt')):
                 continue
             matrix_map[wf_id] = {}
@@ -156,6 +89,7 @@ class JobsConstructor(object):
 
     def constructJobsMatrix(self, release, arch, days, page_size, workflow_matrix_list, wf_limit,wfs_basedir):
         matrixMap = self.getJobsCommands(workflow_matrix_list, wf_limit, wfs_basedir)
+        #print matrixMap
         jobs_stats = self.getWorkflowStatsFromES(release, arch, days, page_size)
         #for local test get the stats from a file
 	'''
@@ -195,17 +129,27 @@ class JobsConstructor(object):
 
 if __name__ == "__main__":
 
+
+    # fix ES queries
+
     opts = None
-    release = 'CMSSW_9_3_X*'
-    arch = 'slc6_amd64_gcc630'
+    release = 'CMSSW_10_5_X'
+    arch = 'slc7_amd64_gcc700'
     days = 7
     page_size = 0
+    jk = JobsConstructor()
+
+    #matrix_map = jk.getJobsCommands()
+    #print json.dumps(matrix_map, indent=2, sort_keys=True, separators=(',', ': '))
+    result = jk.getWorkflowStatsFromES(release=release, arch=arch, lastNdays=7, page_size=10000)
+    print json.dumps(result, indent=2, sort_keys=True, separators=(',', ': '))
+    
+    exit(0)
 
     wf_list = None
     with open('resources/wf_slc6_530.txt') as wf_list_file:
         wf_list = wf_list_file.read().replace('\n', ',')
         wf_list = wf_list[:-1]
-
     
     known_errors = get_known_errors(release, arch, 'relvals')
 

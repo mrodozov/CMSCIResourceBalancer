@@ -7,15 +7,14 @@ from JobsProcessor import JobsProcessor
 from threading import Event
 import Queue
 from optparse import OptionParser
-import psutil
+import json
 from multiprocessing import cpu_count
+from CustomFunctions import relval_test_process, process_relval_workflow_step, cpu_priority_sorting_function
+import psutil
+
 import os
 import sys
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(sys.argv[0]))
-CMS_BOT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR,'..'))
-sys.path.insert(0, CMS_BOT_DIR)
-sys.path.insert(0, os.path.join(CMS_BOT_DIR, 'jobs'))
 
 from cmssw_known_errors import get_known_errors
 
@@ -31,45 +30,42 @@ if __name__ == "__main__":
     parser.add_option("-p", "--page", dest="page_size",
                       help="Page size, default 0 means no page and get all data in one go", type=int, default=0)
     opts, args = parser.parse_args()
-
+    opts.release = "CMSSW_10_4_CLANG"
+    opts.arch = "slc7_amd64_gcc700"
+    '''
     if not opts.arch:
-        if opts.release == "*":
-            opts.arch = "*"
+        if opts.release == "CMSSW_10_4_X":
+            opts.arch = "slc7_amd64_gcc700"
         else:
             script_path = abspath(dirname(argv[0]))
             err, out = getstatusoutput(
                 "grep 'RELEASE_QUEUE=%s;' %s/config.map | grep -v 'DISABLED=1;' | grep 'PROD_ARCH=1;' | tr ';' '\n' | grep 'SCRAM_ARCH=' | sed 's|.*=||'" % (
                 opts.release, script_path))
             if err:
-                opts.arch = "slc6_amd64_gcc630"
+                opts.arch = "slc7_amd64_gcc700"
             else:
                 opts.arch = out
-    if opts.release != "*": opts.release = opts.release + "*"
-
+    '''
     ''' gets the CL arguments '''
-    
-    #print opts.release, opts.arch, opts.days
-    
-    #exit(0)
+
+    print opts.release, opts.arch, opts.days
 
     #opts.release = 'CMSSW_9_3_X*'
     #opts.arch = 'slc6_amd64_gcc630'
     #opts.days = 7
     opts.page_size = 0
-    
-    
-    wf_list = None
+    wf_list = argv[1]
 
     #with open('resources/wf_slc6_530_1of5.txt') as wf_list_file:
-    #    wf_list = wf_list_file.read().replace('\n', ',')
-    #    wf_list = wf_list[:-1]
+        #wf_list = wf_list_file.read().replace('\n', ',')
+        #wf_list = wf_list[:-1]
 
     ''' here the program is tested  '''
-    
+
     avg_mem = 0.90*psutil.virtual_memory()[0]
     avg_cpu = 200*cpu_count()
     wf_limit = 1000
-    
+
     #print psutil.virtual_memory()[]
     #exit(0)
 
@@ -78,15 +74,21 @@ if __name__ == "__main__":
 
     getNextJobsEvent = Event()
     finishJobsEvent = Event()
-    
+
     known_errors = get_known_errors(opts.release, opts.arch, 'relvals')
     #print known_errors
     
-    jc = JobsConstructor(None, known_errors)    
-    matrixMap =jc.constructJobsMatrix(opts.release, opts.arch, opts.days, opts.page_size, wf_list, wf_limit,os.environ["CMSSW_BASE"]+"/pyRelval/")
+    jc = JobsConstructor(None, known_errors)
+    matrixMap =jc.constructJobsMatrix(opts.release, opts.arch, opts.days, opts.page_size, wf_list, wf_limit, "/Users/mrodozov/Projects/cms-bot/steps")
+    result = jc.getWorkflowStatsFromES(release=opts.release, arch=opts.arch, lastNdays=7, page_size=10000)
+    #print json.dumps(result, indent=2, sort_keys=True, separators=(',', ': '))
+
+    print matrixMap
 
     ''' up to here it constructs the jobs stats'''
-    
+
+    #exit(0)
+
     jm = JobsManager(matrixMap)
     jm.toProcessQueue = toProcessQueue
     jm.processedQueue = processedTasksQueue
@@ -99,6 +101,9 @@ if __name__ == "__main__":
 
     jm.getNextJobsEvent = getNextJobsEvent
     jm.finishJobsEvent = finishJobsEvent
+
+    jm.job_process_function = relval_test_process
+    jm.jobs_sorting_function = cpu_priority_sorting_function
 
     jm.putJobsOnProcessQueue.start()
     jp.start()
@@ -120,5 +125,5 @@ if __name__ == "__main__":
 
     #print wf_list
     
-
+    #add on matrix construct and wf stats for them
 
